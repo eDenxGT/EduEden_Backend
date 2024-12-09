@@ -7,6 +7,10 @@ const messageSchema = new mongoose.Schema(
 			ref: "Chat",
 			required: true,
 		},
+		message_id: {
+			type: String,
+			required: true,
+		},
 		sender_id: {
 			type: String,
 			required: true,
@@ -27,16 +31,6 @@ const messageSchema = new mongoose.Schema(
 			type: Date,
 			default: Date.now,
 		}, 
-		blocked_details: {
-			blocked_by: {
-				type: String,
-				default: null,
-			},
-			reason: {
-				type: String,
-				default: "",
-			},
-		},
 	},
 	{ timestamps: true }
 );
