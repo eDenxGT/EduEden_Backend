@@ -33,7 +33,7 @@ const chatHandlers = (io, socket, onlineTutors, onlineStudents) => {
       chat.last_message = { sender_id, message_text, time_stamp };
 
       if (socket.user.role === "student") {
-        chat.unread_message_count.tutor += 1; 
+        chat.unread_message_count.tutor += 1;
       } else if (socket.user.role === "tutor") {
         chat.unread_message_count.student += 1;
       }
