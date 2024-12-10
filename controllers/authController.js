@@ -931,6 +931,7 @@ const refreshAccessToken = async (req, res) => {
           _id: decoded?.data?._id,
           email: decoded?.data?.email,
           role: decoded?.data?.role,
+		  user_id: decoded?.data?.user_id,
         },
         accessSecret,
 

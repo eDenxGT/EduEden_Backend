@@ -3,33 +3,26 @@ const Chat = require("../models/chatModel");
 
 const chatHandlers = (io, socket, onlineTutors, onlineStudents) => {
   socket.on("send-message", async (data) => {
-    const { message_id, sender_id, receiver_id, message_text, time_stamp } =
-      data;
+    const {
+      message_id,
+      sender_id,
+      receiver_id,
+      message_text,
+      time_stamp,
+      chat_id,
+    } = data;
     console.log(data);
 
     try {
-      let chat;
-      if (socket.user.role === "student") {
-        chat = await Chat.findOne({
-          student_id: sender_id,
-          tutor_id: receiver_id,
-        });
-      } else if (socket.user.role === "tutor") {
-        chat = await Chat.findOne({
-          student_id: receiver_id,
-          tutor_id: sender_id,
-        });
-      }
+      const chat = await Chat.findOne({ _id: chat_id });
 
       if (!chat) {
-        chat = await Chat.create({
-          student_id: socket.user.role === "student" ? sender_id : receiver_id,
-          tutor_id: socket.user.role === "tutor" ? sender_id : receiver_id,
-        });
+        console.error("Chat not found");
+        return;
       }
 
       await Message.create({
-        chat_id: chat._id,
+        chat_id,
         message_id,
         sender_id,
         receiver_id,
@@ -37,28 +30,32 @@ const chatHandlers = (io, socket, onlineTutors, onlineStudents) => {
         time_stamp,
       });
 
-      chat.last_message = { message_text, time_stamp };
-      if (socket.user.role === "student") {
-        chat.unread_message_count += 1;
-      } else {
-        chat.unread_message_count += 1;
-      }
-      await chat.save();
+      chat.last_message = { sender_id, message_text, time_stamp };
 
       if (socket.user.role === "student") {
-        io.to(onlineTutors[receiver_id].socketId).emit("receive-message", {
-          message_id,
-          sender_id,
-          message_text,
-          time_stamp,
-        });
+        chat.unread_message_count.tutor += 1; 
       } else if (socket.user.role === "tutor") {
-        io.to(onlineStudents[receiver_id].socketId).emit("receive-message", {
+        chat.unread_message_count.student += 1;
+      }
+
+      await chat.save();
+
+      const recipientOnline =
+        socket.user.role === "student"
+          ? onlineTutors[receiver_id]
+          : onlineStudents[receiver_id];
+
+      if (recipientOnline) {
+        io.to(recipientOnline.socketId).emit("receive-message", {
           message_id,
           sender_id,
+          chat_id,
           message_text,
           time_stamp,
+          chatData: chat,
         });
+      } else {
+        console.error(`Receiver ${receiver_id} is not online.`);
       }
     } catch (error) {
       console.error("Error saving message:", error);

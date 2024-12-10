@@ -34,6 +34,7 @@ const getChatsByUserId = async (req, res) => {
           student_is_online: 1,
           tutor_is_online: 1,
           is_blocked: 1,
+          unread_message_count: 1,
           "userDetails.full_name": 1,
           "userDetails.avatar": 1,
         },
@@ -52,7 +53,7 @@ const getMessagesByChatId = async (req, res) => {
   try {
     const { chat_id } = req.params;
     const messages = await Message.find({ chat_id });
-	console.log(messages)
+    // console.log(messages);
     res.status(200).json(messages);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -74,6 +75,8 @@ const createChat = async (req, res) => {
       chat = await Chat.create({ student_id, tutor_id });
     }
 
+    // updateUserChatUi()
+
     const chatToSent = await Chat.aggregate([
       {
         $match: { _id: chat._id },
@@ -94,6 +97,7 @@ const createChat = async (req, res) => {
           student_is_online: 1,
           tutor_is_online: 1,
           is_blocked: 1,
+          unread_message_count: 1,
           "userDetails.full_name": 1,
           "userDetails.avatar": 1,
         },
@@ -183,61 +187,84 @@ const getStudentsByTutorId = async (req, res) => {
 };
 
 const getTutorsByStudentId = async (req, res) => {
-	try {
-	  const { student_id } = req.params;
-  
-	  const findTutors = await Student.aggregate([
-		{
-		  $match: { user_id:student_id },
-		},
-		{
-		  $lookup: {
-			from: "courses",
-			localField: "active_courses",
-			foreignField: "course_id",
-			as: "courses",
-		  },
-		},
-		{
-		  $unwind: "$courses",
-		},
-		{
-		  $lookup: {
-			from: "tutors",
-			localField: "courses.tutor_id",
-			foreignField: "user_id",
-			as: "tutors",
-		  },
-		},
-		{
-		  $unwind: "$tutors",
-		},
-		{
-		  $group: {
-			_id: "$tutors.user_id",
-			full_name: { $first: "$tutors.full_name" },
-			avatar: { $first: "$tutors.avatar" },
-			user_id: { $first: "$tutors.user_id" },
-		  },
-		},
-		{
-		  $project: {
-			_id: 0,
-			full_name: 1,
-			avatar: 1,
-			user_id: 1,
-		  },
-		},
-	  ]);
-	  console.log("TUTORE",findTutors);
-  
-	  res.status(200).json(findTutors);
-	} catch (error) {
-	  console.error("Error fetching tutors by student ID:", error);
-	  return res.status(500).json({ message: "Internal server error" });
-	}
-  };
-  
+  try {
+    const { student_id } = req.params;
+
+    const findTutors = await Student.aggregate([
+      {
+        $match: { user_id: student_id },
+      },
+      {
+        $lookup: {
+          from: "courses",
+          localField: "active_courses",
+          foreignField: "course_id",
+          as: "courses",
+        },
+      },
+      {
+        $unwind: "$courses",
+      },
+      {
+        $lookup: {
+          from: "tutors",
+          localField: "courses.tutor_id",
+          foreignField: "user_id",
+          as: "tutors",
+        },
+      },
+      {
+        $unwind: "$tutors",
+      },
+      {
+        $group: {
+          _id: "$tutors.user_id",
+          full_name: { $first: "$tutors.full_name" },
+          avatar: { $first: "$tutors.avatar" },
+          user_id: { $first: "$tutors.user_id" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          full_name: 1,
+          avatar: 1,
+          user_id: 1,
+        },
+      },
+    ]);
+    //   console.log("TUTORE",findTutors);
+
+    res.status(200).json(findTutors);
+  } catch (error) {
+    console.error("Error fetching tutors by student ID:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const markMessageAsRead = async (req, res) => {
+  try {
+    const { chat_id, user_role } = req.body;
+    const chat = await Chat.findById(chat_id);
+    console.log("ROLE",req.body);
+    const isStudent = user_role === "student";
+
+    if (!chat) {
+      return res.status(404).json({ message: "Chat not found" });
+    }
+
+    isStudent
+      ? (chat.unread_message_count.student = 0)
+      : (chat.unread_message_count.tutor = 0);
+
+    await chat.save();
+
+    res.status(200).json({ message: "Message marked as read" });
+  } catch (error) {
+    console.error("Error marking message as read:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
 
 module.exports = {
   getChatsByUserId,
@@ -247,4 +274,5 @@ module.exports = {
   createMessage,
   getStudentsByTutorId,
   getTutorsByStudentId,
+  markMessageAsRead,
 };

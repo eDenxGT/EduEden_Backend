@@ -2,6 +2,7 @@ const { Server } = require("socket.io");
 const { chatHandlers } = require("./chatHandlers");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
+const Chat = require("../models/chatModel");
 
 let onlineTutors = {};
 let onlineStudents = {};
@@ -36,7 +37,7 @@ const initializeSocket = (server) => {
 
     try {
       const decoded = jwt.decode(token, access_secret);
-
+      console.log("DECODED",decoded)
       if (!decoded || !decoded.role || !decoded._id) {
         return next(new Error("Invalid token. Please login again."));
       }
@@ -58,20 +59,32 @@ const initializeSocket = (server) => {
     }
   });
 
-  io.on("connection", (socket) => {
+  io.on("connection", async (socket) => {
     console.log("New client connected:", socket.id);
 
     if (socket.user) {
-      if (socket.user.role === "tutor") {
-        onlineTutors[socket.user.user_id] = {
-          socketId: socket.id,
-          user_id: socket.user.user_id,
-        };
-      } else if (socket.user.role === "student") {
-        onlineStudents[socket.user.user_id] = {
-          socketId: socket.id,
-          user_id: socket.user.user_id,
-        };
+      const { user_id, role } = socket.user;
+  console.log(role)
+      try {
+        if (role === "tutor") {
+          onlineTutors[user_id] = { socketId: socket.id, user_id };
+          await Chat.updateMany(
+            { tutor_id: user_id },
+            { $set: { tutor_is_online: true } }
+          );
+          // console.log(result);
+
+        } else if (role === "student") {
+          onlineStudents[user_id] = { socketId: socket.id, user_id };
+          await Chat.updateMany(
+            { student_id: user_id },
+            { $set: { student_is_online: true } }
+          );
+          // console.log( "result",result);
+        }
+        socket.broadcast.emit("users-update")
+      } catch (error) {
+        console.error("Error updating online status:", error);
       }
     }
     console.log("Tutors", onlineTutors);
@@ -79,14 +92,23 @@ const initializeSocket = (server) => {
 
     chatHandlers(io, socket, onlineTutors, onlineStudents);
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", async () => {
       console.log("Client disconnected:", socket.id);
       if (socket.user) {
         if (socket.user.role === "tutor") {
+          await Chat.updateMany(
+            { tutor_id: socket.user.user_id },
+            { $set: { tutor_is_online: false } }
+          );
           delete onlineTutors[socket.user.user_id];
         } else if (socket.user.role === "student") {
+          await Chat.updateMany(
+            { student_id: socket.user.user_id },
+            { $set: { student_is_online: false } }
+          );
           delete onlineStudents[socket.user.user_id];
         }
+        socket.broadcast.emit("users-update")
       }
     });
   });
