@@ -446,6 +446,7 @@ const googleAuth = async (req, res) => {
           "Your account has been blocked. Please contact the support team.",
       });
     }
+    
     if (role === "tutor") {
       if (user.is_identity_verified === "pending") {
         return res.status(403).json({
@@ -464,6 +465,7 @@ const googleAuth = async (req, res) => {
     const randomPart = Math.random().toString(36).substring(2, 6);
     const timestampPart = Date.now().toString().slice(-4);
     const uniqueUserId = `edueden${randomPart}${timestampPart}`;
+  
     if (!user) {
       user = new User({
         full_name: name,

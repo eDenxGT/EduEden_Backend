@@ -1,5 +1,6 @@
 const { Server } = require("socket.io");
 const { chatHandlers } = require("./chatHandlers");
+const { videoChatHandlers } = require("./videoChatHandlers");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const Chat = require("../models/chatModel");
@@ -91,6 +92,7 @@ const initializeSocket = (server) => {
     console.log("Students", onlineStudents);
 
     chatHandlers(io, socket, onlineTutors, onlineStudents);
+    videoChatHandlers(io, socket, onlineTutors, onlineStudents);
 
     socket.on("disconnect", async () => {
       console.log("Client disconnected:", socket.id);
