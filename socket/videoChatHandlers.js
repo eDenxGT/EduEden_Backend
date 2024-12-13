@@ -14,9 +14,9 @@ const videoChatHandlers = (io, socket, onlineTutors, onlineStudents) => {
     }) => {
       console.log(signalData);
       const receiver = onlineTutors[receiver_id] || onlineStudents[receiver_id];
-      console.log(receiver.socketId);
+      console.log(receiver?.socketId);
       if (receiver) {
-        io.to(receiver.socketId).emit("incomingCall", {
+        io.to(receiver?.socketId).emit("incomingCall", {
           from,
           callerData: {
             name: callerName,
