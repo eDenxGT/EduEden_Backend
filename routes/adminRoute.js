@@ -10,7 +10,8 @@ const {
 	searchStudents,
 	searchTutors,
 	getTutorApplications,
-	updateTutorApplicationStatus
+	updateTutorApplicationStatus,
+	getAllOrders
 } = require("../controllers/adminController");
 
 adminRouter
@@ -22,5 +23,7 @@ adminRouter
 	.get("/search-tutors", verifyAdmin, searchTutors)
 	.get("/get-tutor-applications", verifyAdmin, getTutorApplications)
 	.put("/update-tutor-status", verifyAdmin, updateTutorApplicationStatus)
+	.get("/get-all-orders", verifyAdmin, getAllOrders)
+	
 
 module.exports = adminRouter;
