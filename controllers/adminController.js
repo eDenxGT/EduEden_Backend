@@ -10,15 +10,15 @@ const FRONTEND_URL = process.env.CLIENT_URL;
 
 const getTutors = async (req, res) => {
   try {
-	const { apiFor } = req.query;
+    const { apiFor } = req.query;
     const tutors = await Tutor.find();
-	if (apiFor === "ordersList") {
-		const tutorsDataToSend = tutors.map((tutor) => ({
-		  user_id: tutor.user_id,
-		  full_name: tutor.full_name,
-		}));
-		return res.status(200).json({ tutors: tutorsDataToSend });
-	  }
+    if (apiFor === "ordersList") {
+      const tutorsDataToSend = tutors.map((tutor) => ({
+        user_id: tutor.user_id,
+        full_name: tutor.full_name,
+      }));
+      return res.status(200).json({ tutors: tutorsDataToSend });
+    }
     return res.status(200).json({ tutors });
   } catch (error) {
     console.error("Error fetching tutors:", error);
@@ -170,146 +170,153 @@ const updateTutorApplicationStatus = async (req, res) => {
 };
 
 const getAllOrders = async (req, res) => {
-	try {
-	  const { page = 1, limit = 10, search = "", course, tutor, priceRange, startDate, endDate } = req.query;
-  console.log(req.query);
-	  const filters = {};
-  
-	  if (search) {
-		filters.$or = [
-		  { "student_name": { $regex: search, $options: "i" } },
-		  { order_id: { $regex: search, $options: "i" } },
-		];
-	  }
-  
-	  if (course) {
-		filters["course_details.course_id"] = course;
-	  }
-  
-	  if (tutor) {
-		filters["course_details.tutor_id"] = tutor;
-	  }
-  
-	  if (priceRange) {
-		const [minPrice, maxPrice] = priceRange.split("-").map(Number);
-		filters["amount"] = { $gte: minPrice, $lte: maxPrice || Infinity };
-	  }
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      search = "",
+      course,
+      tutor,
+      priceRange,
+      startDate,
+      endDate,
+    } = req.query;
+    const filters = {};
 
-	  if (startDate || endDate) {
-		filters.created_at = {};
-		if (startDate) {
-		  filters.created_at.$gte = new Date(startDate);
-		}
-		if (endDate) {
-		  const endOfDay = new Date(endDate);
-		  endOfDay.setHours(23, 59, 59, 999);
-		  filters.created_at.$lte = endOfDay;
-		}
-	  }
-	  
-	  const skip = (Number(page) - 1) * Number(limit);
-  
-	  const orders = await Order.aggregate([
-		{
-		  $lookup: {
-			from: "courses",
-			localField: "courses",
-			foreignField: "course_id",
-			as: "course_details",
-		  },
-		},
-		{
-		  $lookup: {
-			from: "students",
-			localField: "student_id",
-			foreignField: "user_id",
-			as: "student_details",
-		  },
-		},
-		{
-		  $unwind: {
-			path: "$student_details",
-			preserveNullAndEmptyArrays: true,
-		  },
-		},
-		{
-		  $project: {
-			order_id: 1,
-			student_id: 1,
-			student_name: "$student_details.full_name",
-			amount: 1,
-			status: 1,
-			created_at: 1,
-			course_details: {
-			  $map: {
-				input: "$course_details",
-				as: "course",
-				in: {
-				  course_id: "$$course.course_id",
-				  title: "$$course.title",
-				  price: "$$course.price",
-				  tutor_id: "$$course.tutor_id",
-				},
-			  },
-			},
-		  },
-		},
-		{
-		  $match: filters,
-		},
-		{
-		  $skip: skip,
-		},
-		{
-		  $limit: Number(limit),
-		},
-	  ]);
-  
-	  const totalOrders = await Order.aggregate([
-		{
-		  $lookup: {
-			from: "courses",
-			localField: "courses",
-			foreignField: "course_id",
-			as: "course_details",
-		  },
-		},
-		{
-		  $lookup: {
-			from: "students",
-			localField: "student_id",
-			foreignField: "user_id",
-			as: "student_details",
-		  },
-		},
-		{
-		  $unwind: {
-			path: "$student_details",
-			preserveNullAndEmptyArrays: true,
-		  },
-		},
-		{
-		  $match: filters,
-		},
-		{
-		  $count: "total",
-		},
-	  ]);
-  
-	  const total = totalOrders[0]?.total || 0;
-  
-	  return res.status(200).json({
-		orders,
-		total,
-		totalPages: Math.ceil(total / limit),
-		currentPage: Number(page),
-	  });
-	} catch (error) {
-	  console.log("Get All Orders Error: ", error);
-	  return res.status(500).json({ message: "Error getting all orders" });
-	}
-  };
-  
+    if (search) {
+      filters.$or = [
+        { student_name: { $regex: search, $options: "i" } },
+        { order_id: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    if (course) {
+      filters["course_details.course_id"] = course;
+    }
+
+    if (tutor) {
+      filters["course_details.tutor_id"] = tutor;
+    }
+
+    if (priceRange) {
+      const [minPrice, maxPrice] = priceRange.split("-").map(Number);
+      filters["amount"] = { $gte: minPrice, $lte: maxPrice || Infinity };
+    }
+
+    if (startDate || endDate) {
+      filters.created_at = {};
+      if (startDate) {
+        filters.created_at.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        const endOfDay = new Date(endDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        filters.created_at.$lte = endOfDay;
+      }
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const orders = await Order.aggregate([
+      {
+        $lookup: {
+          from: "courses",
+          localField: "courses",
+          foreignField: "course_id",
+          as: "course_details",
+        },
+      },
+      {
+        $lookup: {
+          from: "students",
+          localField: "student_id",
+          foreignField: "user_id",
+          as: "student_details",
+        },
+      },
+      {
+        $unwind: {
+          path: "$student_details",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          order_id: 1,
+          student_id: 1,
+          student_name: "$student_details.full_name",
+          amount: 1,
+          status: 1,
+          created_at: 1,
+          course_details: {
+            $map: {
+              input: "$course_details",
+              as: "course",
+              in: {
+                course_id: "$$course.course_id",
+                title: "$$course.title",
+                price: "$$course.price",
+                tutor_id: "$$course.tutor_id",
+              },
+            },
+          },
+        },
+      },
+      {
+        $match: filters,
+      },
+      {
+        $skip: skip,
+      },
+      {
+        $limit: Number(limit),
+      },
+    ]);
+
+    const totalOrders = await Order.aggregate([
+      {
+        $lookup: {
+          from: "courses",
+          localField: "courses",
+          foreignField: "course_id",
+          as: "course_details",
+        },
+      },
+      {
+        $lookup: {
+          from: "students",
+          localField: "student_id",
+          foreignField: "user_id",
+          as: "student_details",
+        },
+      },
+      {
+        $unwind: {
+          path: "$student_details",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $match: filters,
+      },
+      {
+        $count: "total",
+      },
+    ]);
+
+    const total = totalOrders[0]?.total || 0;
+
+    return res.status(200).json({
+      orders,
+      total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: Number(page),
+    });
+  } catch (error) {
+    console.log("Get All Orders Error: ", error);
+    return res.status(500).json({ message: "Error getting all orders" });
+  }
+};
 
 module.exports = {
   getTutors,
