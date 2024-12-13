@@ -17,7 +17,7 @@ const createOrder = async (req, res) => {
 			.toString(36)
 			.substring(2, 9)}`,
 	};
-
+	
 	try {
 		const order = await razorpayInstance.orders.create(options);
 		const newOrder = new Order({
