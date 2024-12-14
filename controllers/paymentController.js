@@ -6,6 +6,7 @@ const Cart = require("../models/cartModel");
 const Lecture = require("../models/lectureModel");
 const Course = require("../models/courseModel");
 const CourseProgress = require("../models/courseProgressModel");
+const Tutor = require("../models/tutorModel");
 
 const createOrder = async (req, res) => {
 	const { amount, ...rest } = req.body;
@@ -90,7 +91,6 @@ const verifyPayment = async (req, res) => {
 					lecture_id: lecture.lecture_id,
 					status: "not-started",
 				}));
-				console.log(progressArray)
 				return {
 					student_id: order.student_id,
 					course_id: courseId,
@@ -112,6 +112,42 @@ const verifyPayment = async (req, res) => {
 				{ user_id: order.student_id },
 				{ $pull: { courses: { course_id: { $in: order.courses } } } }
 			);
+
+			try {
+				const tutorRevenues = await Course.aggregate([
+				  {
+					$match: {
+					  course_id: { $in: order.courses }, 
+					},
+				  },
+				  {
+					$group: {
+					  _id: "$tutor_id", 
+					  totalRevenue: { $sum: "$price" }, 
+					},
+				  },
+				]);
+				console.log(tutorRevenues)
+			
+				if (!tutorRevenues || tutorRevenues.length === 0) {
+				  console.log("No tutors found for the given order.");
+				  return;
+				}
+			
+				const bulkOperations = tutorRevenues.map(({ _id, totalRevenue }) => ({
+					updateOne: {
+					  filter: { user_id: _id }, 
+					  update: { $inc: { total_revenue: totalRevenue } },
+					},
+				  }));
+				  
+			
+				await Tutor.bulkWrite(bulkOperations);
+			
+				console.log("Tutor revenues updated successfully.");
+			  } catch (error) {
+				console.error("Error updating tutor revenues :", error);
+			  }
 
 			res.status(200).json({
 				success: true,

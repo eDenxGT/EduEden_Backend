@@ -51,6 +51,23 @@ const TutorSchema = new mongoose.Schema(
 			type: String,
 			default: "pending",
 		},
+		card_details: {
+			card_number: {
+				type: String,
+			},
+			owner_name: {
+				type: String,
+			},
+			expiry_date: {
+				type: Date,
+			},
+			cvv: {
+				type: String,
+			},
+			type: {
+				type: String,
+			},
+		},
 		bio: {
 			type: String,
 		},
