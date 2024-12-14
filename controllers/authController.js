@@ -232,7 +232,7 @@ const verifyOtp = async (req, res) => {
         user_id: uniqueUserId,
         field_name: unverifiedUser.field_name,
         experience: unverifiedUser.experience,
-        is_identity_verified: false,
+        is_identity_verified: "pending",
       });
       await userData.save();
     }

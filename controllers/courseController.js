@@ -199,7 +199,14 @@ const getAllCourses = async (req, res) => {
       }));
       return res.status(200).json({ courses: coursesDataToSend });
     }
-
+	if(apiFor === "forPurchaseHistory") {
+		availableCourses = courses.filter((course) => course.is_listed === true);
+		const coursesDataToSend = availableCourses.map((course) => ({
+			course_id: course.course_id,
+			title: course.title,
+		}));
+		return res.status(200).json({ courses: coursesDataToSend });
+	}
     return res.status(200).json({ courses });
   } catch (error) {
     console.log("Get All Courses error : ", error);
