@@ -10,6 +10,7 @@ const {
   getTutorWithdrawals,
   withdrawTutorEarnings,
   addCard,
+  getCourseDetailsByTutorId,
 } = require("../controllers/tutorController");
 
 tutorRouter
@@ -17,6 +18,7 @@ tutorRouter
   .get("/get-details", verifyTutor, getTutorDetails)
   .get("/get-earnings", verifyTutor, getTutorEarnings)
   .get("/get-withdrawals", verifyTutor, getTutorWithdrawals)
+  .get("/get-courses", verifyTutor, getCourseDetailsByTutorId)
   .post("/withdraw", verifyTutor, withdrawTutorEarnings)
   .post("/add-card", verifyTutor, addCard);
 

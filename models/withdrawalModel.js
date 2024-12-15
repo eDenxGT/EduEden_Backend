@@ -13,13 +13,33 @@ const WithdrawalSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ["pending", "completed", "rejected"],
+    enum: ["pending", "approved", "rejected"],
     default: "pending",
   },
   payment_method: {
     type: String,
     enum: ["card", "upi"],
     required: true,
+  },
+  upi_id: {
+    type: String,
+  },
+  card_details: {
+    card_number: {
+      type: String,
+    },
+    owner_name: {
+      type: String,
+    },
+    expiry_date: {
+      type: String,
+    },
+    cvv: {
+      type: String,
+    },
+    type: {
+      type: String,
+    },
   },
   requested_at: {
     type: Date,

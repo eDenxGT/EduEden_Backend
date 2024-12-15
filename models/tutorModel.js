@@ -59,7 +59,7 @@ const TutorSchema = new mongoose.Schema(
 				type: String,
 			},
 			expiry_date: {
-				type: Date,
+				type: String,
 			},
 			cvv: {
 				type: String,

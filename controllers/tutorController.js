@@ -1,6 +1,7 @@
 const Tutor = require("../models/tutorModel");
 const Student = require("../models/studentModel");
 const Order = require("../models/orderModel");
+const Course = require("../models/courseModel");
 const Withdrawal = require("../models/withdrawalModel");
 
 const { comparePassword, hashPassword } = require("../utils/passwordUtils");
@@ -132,14 +133,14 @@ const getTutorDetails = async (req, res) => {
     if (!tutor) {
       return res.status(404).json({ message: "Tutor not found" });
     }
-	console.log(tutor);
     if (apiFor === "earningsPage") {
       const tutorDetailsToSent = {
         total_earnings: tutor?.total_revenue,
         total_withdrawn_amount: tutor?.withdrawn_amount,
         current_balance: tutor?.total_revenue - tutor?.withdrawn_amount,
-		card: tutor?.card_details || null
+        card: tutor?.card_details || null,
       };
+      console.log("dwadaww", tutorDetailsToSent);
       return res.status(200).json({ details: tutorDetailsToSent });
     }
     res.status(200).json({ tutor });
@@ -163,7 +164,7 @@ const getTutorEarnings = async (req, res) => {
       total_withdrawn_amount: tutor?.withdrawn_amount,
       current_balance: tutor?.total_revenue - tutor?.withdrawn_amount,
     };
-    res.status(200).json({ earnings: tutor });
+    res.status(200).json({ earnings });
   } catch (error) {
     console.error("Error retrieving tutor earnings:", error);
     res.status(500).json({ message: "Internal server error" });
@@ -173,11 +174,13 @@ const getTutorEarnings = async (req, res) => {
 const getTutorWithdrawals = async (req, res) => {
   try {
     const { user_id } = req.user;
-    const tutor = await Tutor.findOne({ user_id });
-    if (!tutor) {
+    const withdrawals = await Withdrawal.find({ tutor_id: user_id });
+    if (!withdrawals) {
       return res.status(404).json({ message: "Tutor not found" });
     }
-    res.status(200).json({ withdrawals: tutor.withdrawals });
+    withdrawals.sort((a, b) => b.requested_at - a.requested_at);
+    console.log(withdrawals);
+    res.status(200).json({ withdrawals });
   } catch (error) {
     console.error("Error retrieving tutor withdrawals:", error);
     res.status(500).json({ message: "Internal server error" });
@@ -187,15 +190,40 @@ const getTutorWithdrawals = async (req, res) => {
 const withdrawTutorEarnings = async (req, res) => {
   try {
     const { user_id } = req.user;
-    const { amount } = req.body;
+    const { method, amount, upi_id } = req.body;
     const tutor = await Tutor.findOne({ user_id });
     if (!tutor) {
       return res.status(404).json({ message: "Tutor not found" });
     }
-    tutor.earnings -= amount;
-    tutor.withdrawals += amount;
+    let withdrawal = null;
+    if (method === "card") {
+      withdrawal = await Withdrawal.create({
+        tutor_id: user_id,
+        amount,
+        payment_method: method,
+        card_details: tutor?.card_details,
+        requested_at: Date.now(),
+      });
+    } else if (method === "upi") {
+      withdrawal = await Withdrawal.create({
+        tutor_id: user_id,
+        amount,
+        payment_method: method,
+        upi_id,
+        requested_at: Date.now(),
+      });
+    } else {
+      return res.status(400).json({ message: "Invalid payment method" });
+    }
+
+    tutor.withdrawn_amount += Number(amount);
     await tutor.save();
-    res.status(200).json({ message: "Withdrawal successful" });
+    res
+      .status(200)
+      .json({
+        message: "Withdrawal Request Submitted. Wait for the approval",
+        withdrawal,
+      });
   } catch (error) {
     console.error("Error withdrawing tutor earnings:", error);
     res.status(500).json({ message: "Internal server error" });
@@ -206,15 +234,39 @@ const addCard = async (req, res) => {
   try {
     const { user_id } = req.user;
     const { card } = req.body;
+    console.log("carddetails", card);
     const tutor = await Tutor.findOne({ user_id });
     if (!tutor) {
       return res.status(404).json({ message: "Tutor not found" });
     }
-    tutor.cards.push(card);
+    tutor.card_details = card;
     await tutor.save();
     res.status(200).json({ message: "Card added successfully" });
   } catch (error) {
     console.error("Error adding card:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const getCourseDetailsByTutorId = async (req, res) => {
+  try {
+    const { user_id } = req.user;
+    const { apiFor } = req.query;
+    const courses = await Course.find({ tutor_id: user_id });
+    if (!courses) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+    if (apiFor === "earningsPage") {
+      const coursesDetailsToSent = courses.map((course) => ({
+        title: course?.title,
+        course_id: course?.course_id,
+        total_revenue: course?.enrolled_count * course?.price,
+      }));
+      return res.status(200).json({ courses: coursesDetailsToSent });
+    }
+    res.status(200).json({ courses });
+  } catch (error) {
+    console.error("Error retrieving course details:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
@@ -226,4 +278,5 @@ module.exports = {
   getTutorWithdrawals,
   withdrawTutorEarnings,
   addCard,
+  getCourseDetailsByTutorId,
 };

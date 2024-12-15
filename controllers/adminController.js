@@ -1,6 +1,7 @@
 const Tutor = require("../models/tutorModel");
 const Student = require("../models/studentModel");
 const Order = require("../models/orderModel");
+const Withdrawal = require("../models/withdrawalModel");
 
 const {
   sendTutorAcceptanceEmail,
@@ -318,6 +319,120 @@ const getAllOrders = async (req, res) => {
   }
 };
 
+const getTutorWithdrawals = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      search = "",
+      status,
+      amountRange,
+      sortOrder = "desc",
+    } = req.query;
+
+    const pageNumber = parseInt(page, 10);
+    const pageSize = parseInt(limit, 10);
+    const sortDirection = sortOrder === "asc" ? 1 : -1;
+
+    const matchStage = {};
+
+    if (search) {
+      matchStage.$or = [
+        { "tutorDetails.full_name": { $regex: search, $options: "i" } },
+      ];
+    }
+
+    if (status) {
+      matchStage.status = status;
+    }
+
+    if (amountRange) {
+      const [minAmount, maxAmount] = amountRange.split("-").map(Number);
+      matchStage.amount = { $gte: minAmount, $lte: maxAmount };
+    }
+
+    const pipeline = [
+      {
+        $lookup: {
+          from: "tutors",
+          localField: "tutor_id",
+          foreignField: "user_id",
+          as: "tutorDetails",
+        },
+      },
+
+      {
+        $unwind: {
+          path: "$tutorDetails",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      { $match: matchStage },
+      {
+        $sort: { requested_at: sortDirection },
+      },
+
+      {
+        $facet: {
+          data: [{ $skip: (pageNumber - 1) * pageSize }, { $limit: pageSize }],
+          totalCount: [{ $count: "total" }],
+        },
+      },
+    ];
+
+    const results = await Withdrawal.aggregate(pipeline);
+
+    const withdrawals = results[0]?.data || [];
+    const total = results[0]?.totalCount[0]?.total || 0;
+
+    return res.status(200).json({
+      withdrawals: withdrawals.map((withdrawal) => ({
+        ...withdrawal,
+        tutor_name: withdrawal.tutorDetails?.full_name || "Unknown",
+      })),
+      totalPages: Math.ceil(total / pageSize),
+    });
+  } catch (error) {
+    console.error("Get Tutor Withdrawals Error: ", error);
+    return res.status(500).json({ message: "Error getting tutor withdrawals" });
+  }
+};
+
+const updateWithdrawalStatus = async (req, res) => {
+  try {
+    const { request_id, newStatus } = req.body;
+    const withdrawal = await Withdrawal.findOne({ _id: request_id });
+    if (!withdrawal) {
+      return res.status(404).json({ message: "Withdrawal not found" });
+    }
+    let tutor = null;
+    withdrawal.status = newStatus;
+    console.log(newStatus);
+    console.log(withdrawal);
+    if (newStatus === "rejected") {
+      tutor = await Tutor.findOne({ user_id: withdrawal?.tutor_id });
+      if (!tutor) {
+        return res.status(404).json({ message: "Tutor not found" });
+      }
+      console.log(tutor);
+      tutor.withdrawn_amount -= Number(withdrawal?.amount);
+
+      console.log(tutor.withdrawn_amount, withdrawal?.amount);
+      await tutor.save();
+    }
+    withdrawal.save();
+    return res
+      .status(200)
+      .json({ message: "Withdrawal status updated successfully" });
+  } catch (error) {
+    console.error("Update Withdrawal Status Error: ", error);
+    return res
+      .status(500)
+      .json({ message: "Error updating withdrawal status" });
+  }
+};
+
 module.exports = {
   getTutors,
   toggleTutorStatus,
@@ -328,4 +443,6 @@ module.exports = {
   getTutorApplications,
   updateTutorApplicationStatus,
   getAllOrders,
+  getTutorWithdrawals,
+  updateWithdrawalStatus,
 };
