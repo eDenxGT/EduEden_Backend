@@ -3,6 +3,9 @@ const Message = require("../models/messageModel");
 const Student = require("../models/studentModel");
 const Course = require("../models/courseModel");
 const Tutor = require("../models/tutorModel");
+const FRONTEND_URL = process.env.CLIENT_URL;
+
+const ethenAiModel = require("../config/ethenAi");
 
 const getChatsByUserId = async (req, res) => {
   try {
@@ -246,7 +249,7 @@ const markMessageAsRead = async (req, res) => {
   try {
     const { chat_id, user_role } = req.body;
     const chat = await Chat.findById(chat_id);
-    console.log("ROLE",req.body);
+    console.log("ROLE", req.body);
     const isStudent = user_role === "student";
 
     if (!chat) {
@@ -266,6 +269,59 @@ const markMessageAsRead = async (req, res) => {
   }
 };
 
+//* =========== Ethen AI Bot =========== *//
+const handleEthenAIBotChat = async (req, res) => {
+  try {
+    const { message } = req.body;
+
+    const systemPrompt = `
+      You are Ethen AI, an intelligent assistant created by eDenxGT for a coding and programming-based e-learning platform called EduEden.
+
+      Your primary role is to assist students with programming, coding, and development-related questions. Follow these instructions carefully:
+
+      1. **Answer Coding and Development Questions**:
+        - Provide clear, concise, and accurate explanations for programming, coding, or development-related doubts.
+        - Include examples or explanations as needed to make concepts easy to understand.
+        - If the user asks about programming languages, frameworks, or tools (e.g., JavaScript, Python, React), answer professionally with relevant details.
+
+      2. **Handle Identity Queries**:
+        - If the user asks for your name (e.g., "What is your name?", "Who are you?"), respond simply with:
+          - "I am Ethen AI. 😊" or "I am Ethen AI. 🤖" (random emojis for friendliness).
+        - If the user asks deeply about your origin, creator, or purpose (e.g., "Who created you?", "Tell me more about yourself"), respond with:
+          - "I am Ethen AI, an intelligent assistant developed by eDenxGT. I am designed to help students by answering programming, coding, and development-related questions. Whether you are learning a new language, solving coding problems, or exploring software development, I’m here to assist you in your learning journey. 😊"
+
+      3. **Politely Avoid Irrelevant Questions**:
+        - If the user asks non-programming-related questions (e.g., "What’s the weather?", "Tell me a joke"), respond politely but avoid answering:
+          - "I specialize in programming, coding, and development-related topics. Let me know if you have any coding questions!"
+
+      4. **Tone and Style**:
+        - Maintain a professional, friendly, and conversational tone.
+        - Avoid unnecessary formatting such as *stars*, bold text, or special symbols. Use clean, plain text for all responses.
+        - Keep responses simple, direct, and easy to understand.
+
+      5. **Handling Rude or Off-Topic Queries**:
+        - If the user behaves rudely or asks inappropriate questions, respond politely and professionally:
+          - "I’m here to help with programming and coding questions. Let me know how I can assist you with your learning goals!"
+
+      Always prioritize being helpful, clear, and focused on programming and development-related content.
+      `;
+
+    const combinedPrompt = `${systemPrompt}\n\nUser: ${message}\nEthen AI:`;
+
+    const aiReply = await ethenAiModel.generateContent(combinedPrompt);
+    const aiResponse = aiReply.response.text().trim();
+
+    // console.log("AI Response:", aiResponse);
+
+    res.status(200).json({
+      reply: aiResponse,
+    });
+  } catch (error) {
+    console.error("Error handling bot chat:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 module.exports = {
   getChatsByUserId,
   getMessagesByChatId,
@@ -275,4 +331,5 @@ module.exports = {
   getStudentsByTutorId,
   getTutorsByStudentId,
   markMessageAsRead,
+  handleEthenAIBotChat,
 };

@@ -9,7 +9,8 @@ const {
   deleteChat,
   createMessage,
   getTutorsByStudentId,
-  markMessageAsRead
+  markMessageAsRead,
+  handleEthenAIBotChat
 } = require("../controllers/chatController");
 
 const { verifyTutor, verifyStudent } = require("../middlewares/auth");
@@ -22,6 +23,7 @@ chatRouter
   .post("/create-chat", createChat)
   .delete("/delete-chat/:chat_id", deleteChat)
   .post("/send-message", createMessage)
-  .put("/read-message", markMessageAsRead);
+  .put("/read-message", markMessageAsRead)
+  .post("/ethen-ai", handleEthenAIBotChat);
 
 module.exports = chatRouter;
