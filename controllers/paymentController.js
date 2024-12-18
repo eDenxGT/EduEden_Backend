@@ -10,7 +10,6 @@ const Tutor = require("../models/tutorModel");
 
 const createOrder = async (req, res) => {
   const { amount, ...rest } = req.body;
-  console.log(req.body);
   const isCourseAvailable = await Course.find({
     $and: [
       { course_id: { $in: rest.courses.map((course) => course.course_id) } },
@@ -25,7 +24,17 @@ const createOrder = async (req, res) => {
   if (isCourseAvailable.length !== rest.courses.length) {
     return res
       .status(400)
-      .json({ message: `Course not available at the moment` });
+      .json({ message: `Some of the courses are not available` });
+  }
+
+  const isCourseAlreadyEnrolled = await Student.findOne({
+    user_id: rest.student_id,
+    active_courses: { $in: rest.courses.map((course) => course.course_id) },
+  });
+  if (isCourseAlreadyEnrolled) {
+    return res
+      .status(400)
+      .json({ message: `You are already enrolled in this course` });
   }
 
   const options = {
@@ -194,7 +203,27 @@ const updateEnrollmentCounts = async (courseIds) => {
   }
 };
 
+const updateOrderStatus = async (req, res) => {
+  const { order_id, status } = req.body;
+  console.log(req.body);
+  try {
+    const order = await Order.findOne({ order_id });
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+    order.status = status;
+    await order.save();
+    return res
+      .status(200)
+      .json({ message: "Order status updated successfully" });
+  } catch (error) {
+    console.error("Error updating order status:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 module.exports = {
   createOrder,
   verifyPayment,
+  updateOrderStatus,
 };
