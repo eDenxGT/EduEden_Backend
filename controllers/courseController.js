@@ -93,13 +93,14 @@ const updateCourse = async (req, res) => {
 
     if (deletedLectures.length > 0) {
       const lecturesDeleted = await Lecture.deleteMany({
-        _id: { $in: deletedLectures },
+        lecture_id: { $in: deletedLectures },
       });
-      if (lecturesDeleted.deletedCount !== deletedLectures.length) {
-        return res
-          .status(500)
-          .json({ message: "Some lectures could not be deleted" });
-      }
+      // console.log(deletedLectures, lecturesDeleted);
+      // if (lecturesDeleted.deletedCount !== deletedLectures.length) {
+      //   return res
+      //     .status(500)
+      //     .json({ message: "Some lectures could not be deleted" });
+      // }
     }
 
     delete course.deletedLectures;
@@ -154,7 +155,7 @@ const getCoursesByTutorId = async (req, res) => {
       },
     ]);
 
-    console.log(courses);
+    // console.log(courses);
 
     return res.status(200).json({ courses });
   } catch (error) {
@@ -179,7 +180,7 @@ const getCoursesByStudentId = async (req, res) => {
       is_listed: true,
     });
 
-    console.log(coursesEnrolledByStudent);
+    // console.log(coursesEnrolledByStudent);
     return res.status(200).json({ courses: coursesEnrolledByStudent });
   } catch (error) {
     console.log("Get Courses By Student Id error : ", error);
@@ -373,7 +374,7 @@ const updateCourseProgressByStudentId = async (req, res) => {
       },
       { new: true }
     );
-    console.log(result);
+    // console.log(result);
     if (!result) {
       return res.status(404).json({ message: "Course progress not found" });
     }

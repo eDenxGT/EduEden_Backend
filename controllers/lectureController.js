@@ -4,99 +4,98 @@ const Student = require("../models/studentModel");
 const Tutor = require("../models/tutorModel");
 
 const addLecture = async (req, res) => {
-	const {
-		course_id,
-		_id,
-		title,
-		description,
-		duration,
-		video,
-		thumbnail,
-		pdf_notes,
-	} = req.body;
+  const {
+    course_id,
+    _id,
+    title,
+    description,
+    duration,
+    video,
+    thumbnail,
+    pdf_notes,
+  } = req.body;
 
-	try {
-		const lecture = new Lecture({
-			course_id,
-			lecture_id: _id,
-			title,
-			description,
-			duration,
-			video,
-			video_thumbnail: thumbnail,
-			lecture_note: pdf_notes,
-		});
+  try {
+    const lecture = new Lecture({
+      course_id,
+      lecture_id: _id,
+      title,
+      description,
+      duration,
+      video,
+      video_thumbnail: thumbnail,
+      lecture_note: pdf_notes,
+    });
 
-		await lecture.save();
-		return res.status(200).json({ message: "Lecture added successfully!" });
-	} catch (error) {
-		console.log("Lecture Adding Error: ", error);
-	}
+    await lecture.save();
+    return res.status(200).json({ message: "Lecture added successfully!" });
+  } catch (error) {
+    console.log("Lecture Adding Error: ", error);
+  }
 };
 
 const updateLecture = async (req, res) => {
-	const { ...updatedData } = req.body;
-	const { lecture_id } = req.params;
-	try {
-		console.log(updatedData, "lecture id", lecture_id);
+  const { ...updatedData } = req.body;
+  const { lecture_id } = req.params;
+  try {
+    if (Object.keys(updatedData).includes("pdf_notes")) updatedData.lecture_note = updatedData.pdf_notes;
 
-		const lecture = await Lecture.findOneAndUpdate(
-			{ lecture_id },
-			updatedData,
-			{ new: true, upsert: true }
-		);
-		if (lecture) {
-			return res
-				.status(200)
-				.json({ message: "Lecture updated successfully!", lecture });
-		}
-	} catch (error) {
-		console.log("Lecture Updating Error: ", error);
-	}
+    // console.log("LECTURE DETAILS NEW", updatedData, "lecture id", lecture_id);
+
+    const lecture = await Lecture.findOneAndUpdate(
+      { lecture_id },
+      updatedData,
+      { new: true, upsert: true }
+    );
+    if (lecture) {
+      return res
+        .status(200)
+        .json({ message: "Lecture updated successfully!", lecture });
+    }
+  } catch (error) {
+    console.log("Lecture Updating Error: ", error);
+  }
 };
 
 const getLecturesByCourseIdForStudent = async (req, res) => {
-	const { course_id } = req.params;
-	const { student_id } = req.query;
+  const { course_id } = req.params;
+  const { student_id } = req.query;
 
-	if (!student_id)
-		return res.status(400).json({ message: "Student ID is required." });
-	if (!course_id)
-		return res.status(400).json({ message: "Course ID is required." });
+  if (!student_id)
+    return res.status(400).json({ message: "Student ID is required." });
+  if (!course_id)
+    return res.status(400).json({ message: "Course ID is required." });
 
-	try {
-		const studentEnrolledThisCourse = await Student.findOne({
-			user_id: student_id,
-			active_courses: { $in: [course_id] },
-		});
-		if (!studentEnrolledThisCourse)
-			return res
-				.status(404)
-				.json({ message: "You are not enrolled in this course!" });
+  try {
+    const studentEnrolledThisCourse = await Student.findOne({
+      user_id: student_id,
+      active_courses: { $in: [course_id] },
+    });
+    if (!studentEnrolledThisCourse)
+      return res
+        .status(404)
+        .json({ message: "You are not enrolled in this course!" });
 
+    const course = await Course.findOne({ course_id });
+    if (!course) return res.status(404).json({ message: "Course not found!" });
 
-		const course = await Course.findOne({ course_id });
-		if (!course)
-			return res.status(404).json({ message: "Course not found!" });
+    const tutor_id = course.tutor_id;
+    const tutorDataToSend = await Tutor.findOne({ user_id: tutor_id });
+    if (!tutorDataToSend)
+      return res.status(404).json({ message: "Tutor not found!" });
 
-		const tutor_id = course.tutor_id;
-		const tutorDataToSend = await Tutor.findOne({ user_id: tutor_id });
-		if (!tutorDataToSend)
-			return res.status(404).json({ message: "Tutor not found!" });
+    const lectures = await Lecture.find({ course_id });
+    lectures.push({ tutor_name: tutorDataToSend?.full_name });
+    lectures.push({ tutor_avatar: tutorDataToSend?.avatar });
 
-
-		const lectures = await Lecture.find({ course_id });
-		lectures.push( {tutor_name:tutorDataToSend?.full_name});
-		lectures.push({tutor_avatar: tutorDataToSend?.avatar});
-
-		if (lectures) {
-			return res
-				.status(200)
-				.json({ message: "Lectures fetched successfully!", lectures });
-		}
-	} catch (error) {
-		console.log("Lecture Fetching Error: ", error);
-	}
+    if (lectures) {
+      return res
+        .status(200)
+        .json({ message: "Lectures fetched successfully!", lectures });
+    }
+  } catch (error) {
+    console.log("Lecture Fetching Error: ", error);
+  }
 };
 
 // const deleteLecture = async (req, res) => {
@@ -114,9 +113,9 @@ const getLecturesByCourseIdForStudent = async (req, res) => {
 // };
 
 module.exports = {
-	addLecture,
-	updateLecture,
-	getLecturesByCourseIdForStudent,
+  addLecture,
+  updateLecture,
+  getLecturesByCourseIdForStudent,
 };
 
 // _id: 'lecture17324358904631732436888438',
