@@ -121,7 +121,7 @@ const getAllTutorsForStudents = async (req, res) => {
     const tutors = await Tutor.find({
       $and: [{ is_blocked: false }, { is_identity_verified: "accept" }],
     });
-    if (apiFor === "forPurchaseHistory") {
+    if (apiFor === "forPurchaseHistory" || apiFor === "forFiltering") {
       const tutorsDataToSend = tutors.map((tutor) => ({
         user_id: tutor.user_id,
         full_name: tutor.full_name,

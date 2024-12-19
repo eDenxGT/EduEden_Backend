@@ -200,14 +200,14 @@ const getAllCourses = async (req, res) => {
       }));
       return res.status(200).json({ courses: coursesDataToSend });
     }
-	if(apiFor === "forPurchaseHistory") {
-		availableCourses = courses.filter((course) => course.is_listed === true);
-		const coursesDataToSend = availableCourses.map((course) => ({
-			course_id: course.course_id,
-			title: course.title,
-		}));
-		return res.status(200).json({ courses: coursesDataToSend });
-	}
+    if (apiFor === "forPurchaseHistory") {
+      availableCourses = courses.filter((course) => course.is_listed === true);
+      const coursesDataToSend = availableCourses.map((course) => ({
+        course_id: course.course_id,
+        title: course.title,
+      }));
+      return res.status(200).json({ courses: coursesDataToSend });
+    }
     return res.status(200).json({ courses });
   } catch (error) {
     console.log("Get All Courses error : ", error);
@@ -217,11 +217,38 @@ const getAllCourses = async (req, res) => {
 
 const getAllListedCourses = async (req, res) => {
   try {
-    const courses = await Course.find({ is_listed: true });
-    return res.status(200).json({ courses });
-  } catch (error) {
-    console.log("Get All Listed Courses error : ", error);
-    return res.status(500).json({ message: "Internal server error" });
+    const { search, sort, category, tutor, page = 1, limit = 12 } = req.query;
+
+    const filters = {};
+    if (search) {
+      filters.title = { $regex: search, $options: "i" };
+    }
+    if (category && category !== "all") {
+      filters.category_id = category;
+    }
+    if (tutor && tutor !== "all") {
+      filters.tutor_id = tutor;
+    }
+
+    let sortOptions = {};
+    if (sort === "date_newest") sortOptions.created_at = -1;
+    if (sort === "date_oldest") sortOptions.created_at = 1;
+    if (sort === "title_asc") sortOptions.title = 1;
+    if (sort === "title_desc") sortOptions.title = -1;
+    if (sort === "price_low_to_high") sortOptions.price = 1;
+    if (sort === "price_high_to_low") sortOptions.price = -1;
+
+    const skip = (page - 1) * limit;
+
+    const [courses, total] = await Promise.all([
+      Course.find(filters).sort(sortOptions).skip(skip).limit(parseInt(limit)),
+      Course.countDocuments(filters),
+    ]);
+
+    res.status(200).json({ courses, total });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch courses" });
   }
 };
 
