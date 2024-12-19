@@ -6,13 +6,15 @@ const {
   updateStudent,
   getStudentDetails,
   getAllTutorsForStudents,
-  getStudentPurchases
+  getStudentPurchases,
+  getEnrolledCourses
 } = require("../controllers/studentController");
 
 studentRouter
   .put("/update-profile", verifyStudent, updateStudent)
   .get("/get-student-details/:student_id", verifyStudent, getStudentDetails)
   .get("/get-tutors", verifyStudent, getAllTutorsForStudents)
-  .get("/get-purchases", verifyStudent, getStudentPurchases);
+  .get("/get-purchases", verifyStudent, getStudentPurchases)
+  .get("/get-enrolled-courses", verifyStudent, getEnrolledCourses);
 
 module.exports = studentRouter;
