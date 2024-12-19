@@ -255,6 +255,20 @@ const getAllListedCourses = async (req, res) => {
 const getCourseByCourseId = async (req, res) => {
   try {
     const { course_id } = req.params;
+    const { apiFor } = req.query;
+    const { user_id } = req.user;
+    console.log(user_id);
+
+    if(apiFor === "studentPurchasedCourse") {
+      const student = await Student.findOne({ user_id });
+      console.log(student)
+      if(!student) {
+        return res.status(404).json({ message: "Student not found" });
+      }
+      if(!student.active_courses.includes(course_id)) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+    }
 
     const course = await Course.aggregate([
       { $match: { course_id } },
@@ -316,8 +330,17 @@ const getCourseByCourseId = async (req, res) => {
       return res.status(404).json({ message: "Course not found" });
     }
 
+    if(apiFor === "studentSingleCourse") {
+      if(course[0].is_listed === false) {
+        return res.status(404).json({ message: "Course not found" });
+      }
+      return res.status(200).json({ course: course[0] });
+    }
+    
+
     return res.status(200).json({ course: course[0] });
   } catch (error) {
+    console.log(req.user)
     console.log("Get Course By Course Id error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }

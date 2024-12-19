@@ -59,16 +59,16 @@ const updateLecture = async (req, res) => {
 
 const getLecturesByCourseIdForStudent = async (req, res) => {
   const { course_id } = req.params;
-  const { student_id } = req.query;
+  const { user_id } = req.user
 
-  if (!student_id)
+  if (!user_id)
     return res.status(400).json({ message: "Student ID is required." });
   if (!course_id)
     return res.status(400).json({ message: "Course ID is required." });
 
   try {
     const studentEnrolledThisCourse = await Student.findOne({
-      user_id: student_id,
+      user_id,
       active_courses: { $in: [course_id] },
     });
     if (!studentEnrolledThisCourse)

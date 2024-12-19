@@ -300,7 +300,7 @@ const getResultOfQuiz = async (req, res) => {
 
     return res
       .status(200)
-      .json({ quiz, courseProgressData, courseName: course.name });
+      .json({ quiz, courseProgressData, courseName: course.title });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }

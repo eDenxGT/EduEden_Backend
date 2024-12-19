@@ -102,7 +102,6 @@ const updateStudent = async (req, res) => {
 const getStudentDetails = async (req, res) => {
   try {
     const { student_id } = req.params;
-    console.log(student_id);
     const student = await Student.findOne({ user_id: student_id });
 
     if (!student) {
@@ -303,7 +302,6 @@ const getEnrolledCourses = async (req, res) => {
 	try {
 	  const { user_id } = req.user;
 	  const { search, sort, category, tutor, page = 1, limit = 12 } = req.query;
-		console.log(req.query)
 	  const student = await Student.findOne({ user_id });
 	  if (!student) {
 		return res.status(404).json({ message: "Student not found" });

@@ -39,10 +39,23 @@ const verifyToken = (role) => {
   };
 };
 
+const verifyUserBasedOnQuery = (req, res, next) => {
+  if (req.query.role === "student") {
+    return verifyToken("student")(req, res, next);
+  } else if (req.query.role === "tutor") {
+    return verifyToken("tutor")(req, res, next);
+  } else if (req.query.role === "admin") {
+    return verifyToken("admin")(req, res, next);
+  } else {
+    return res.status(400).json({ message: "Invalid role specified." });
+  }
+};
+
 
 
 module.exports = {
 	verifyStudent: verifyToken("student"),
 	verifyTutor: verifyToken("tutor"),
 	verifyAdmin: verifyToken("admin"),
+  verifyUserBasedOnQuery
 };
