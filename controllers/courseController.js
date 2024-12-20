@@ -526,6 +526,43 @@ const updateCourseReviews = async (req, res) => {
   }
 };
 
+const getAllCoursesForAdminSide = async (req, res) => {
+  try {
+    const { search, sort, category, listing_status, page = 1, limit = 12 } = req.query;
+
+    const filters = {};
+    if (search) {
+      filters.title = { $regex: search, $options: "i" }; 
+    }
+    if (category && category !== "all") {
+      filters.category_id = category;
+    }
+    if (listing_status && listing_status !== "all") {
+      filters.is_listed = listing_status === "listed";
+    }
+
+    const sortOptions = {};
+    if (sort === "date_newest") sortOptions.created_at = -1;
+    if (sort === "date_oldest") sortOptions.created_at = 1;
+    if (sort === "title_asc") sortOptions.title = 1;
+    if (sort === "title_desc") sortOptions.title = -1;
+    if (sort === "price_low_to_high") sortOptions.price = 1;
+    if (sort === "price_high_to_low") sortOptions.price = -1;
+
+    const skip = (page - 1) * limit;
+
+    const [courses, total] = await Promise.all([
+      Course.find(filters).sort(sortOptions).skip(skip).limit(parseInt(limit)),
+      Course.countDocuments(filters),
+    ]);
+
+    return res.status(200).json({ message: "All courses fetched successfully", courses, total });
+  } catch (error) {
+    console.error("Error fetching courses for admin:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 module.exports = {
   createCourse,
   getCoursesByTutorId,
@@ -539,4 +576,5 @@ module.exports = {
   getCourseProgressByStudentId,
   updateCourseProgressByStudentId,
   updateCourseReviews,
+  getAllCoursesForAdminSide
 };

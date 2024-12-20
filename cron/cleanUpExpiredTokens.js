@@ -4,7 +4,7 @@ const RefreshToken = require("../models/refreshTokenModel");
 cron.schedule("0 0 * * *", async () => {
 	try {
 		const expiredTokens = await RefreshToken.deleteMany({
-			expiresAt: { $lt: new Date() },
+			expires_at: { $lt: new Date() },
 		});
       console.log(expiredTokens);
       

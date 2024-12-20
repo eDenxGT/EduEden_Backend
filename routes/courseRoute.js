@@ -14,6 +14,7 @@ const {
   getCourseProgressByStudentId,
   updateCourseProgressByStudentId,
   updateCourseReviews,
+  getAllCoursesForAdminSide
 } = require("../controllers/courseController");
 
 const { verifyUserBasedOnQuery, verifyTutor } = require("../middlewares/auth");
@@ -23,6 +24,7 @@ courseRouter
   .put("/update/:course_id", updateCourse)
   .get("/my-courses/:tutor_id", verifyTutor, getCoursesByTutorId)
   .get("/get-all", getAllCourses)
+  .get("/get-all-for-admin", getAllCoursesForAdminSide)
   .get("/get-listed", getAllListedCourses)
   .get("/get/:course_id", verifyUserBasedOnQuery, getCourseByCourseId)
   .delete("/delete/:course_id", deleteCourseById)
