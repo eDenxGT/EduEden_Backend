@@ -14,6 +14,7 @@ const {
   getAllOrders,
   getTutorWithdrawals,
   updateWithdrawalStatus,
+  getAdminDashboardData,
 } = require("../controllers/adminController");
 
 adminRouter
@@ -27,6 +28,7 @@ adminRouter
   .put("/update-tutor-status", verifyAdmin, updateTutorApplicationStatus)
   .get("/get-all-orders", verifyAdmin, getAllOrders)
   .get("/get-withdrawal-requests", verifyAdmin, getTutorWithdrawals)
-  .put("/update-withdrawal-status", verifyAdmin, updateWithdrawalStatus);
+  .put("/update-withdrawal-status", verifyAdmin, updateWithdrawalStatus)
+  .get("/get-admin-dashboard-data", verifyAdmin, getAdminDashboardData);
 
 module.exports = adminRouter;

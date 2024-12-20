@@ -2,6 +2,7 @@ const Tutor = require("../models/tutorModel");
 const Student = require("../models/studentModel");
 const Order = require("../models/orderModel");
 const Withdrawal = require("../models/withdrawalModel");
+const Course = require("../models/courseModel");
 
 const {
   sendTutorAcceptanceEmail,
@@ -433,6 +434,84 @@ const updateWithdrawalStatus = async (req, res) => {
   }
 };
 
+const getAdminDashboardData = async (req, res) => {
+  try {
+    const recentTutors = await Tutor.find({}, "full_name created_at")
+      .sort({ created_at: -1 })
+      .limit(5);
+
+    const recentStudents = await Student.find({}, "full_name created_at")
+      .sort({ created_at: -1 })
+      .limit(5);
+
+    const recentCourses = await Course.find({}, "title created_at")
+      .sort({ created_at: -1 })
+      .limit(5);
+
+    const recentOrders = await Order.aggregate([
+      {
+        $lookup: {
+          from: "students",
+          localField: "student_id",
+          foreignField: "user_id",
+          as: "student",
+        },
+      },
+      {
+        $lookup: {
+          from: "courses",
+          localField: "courses",
+          foreignField: "_id",
+          as: "courseDetails",
+        },
+      },
+      {
+        $project: {
+          studentName: { $arrayElemAt: ["$student.full_name", 0] }, 
+          courseTitles: "$courseDetails.title", 
+          amount: 1,
+          status: 1,
+          created_at: 1,
+        },
+      },
+      { $sort: { created_at: -1 } },
+      { $limit: 5 },
+    ]);
+
+    const totalTutors = await Tutor.countDocuments();
+    const totalStudents = await Student.countDocuments();
+    const totalCourses = await Course.countDocuments();
+
+    const totalRevenue = await Order.aggregate([
+      { $match: { status: "success" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        recentActivities: {
+          tutors: recentTutors,
+          students: recentStudents,
+          courses: recentCourses,
+          orders: recentOrders,
+        },
+        totalStats: {
+          totalTutors,
+          totalStudents,
+          totalCourses,
+          totalRevenue: totalRevenue[0]?.total || 0,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching admin dashboard data:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
+
 module.exports = {
   getTutors,
   toggleTutorStatus,
@@ -445,4 +524,5 @@ module.exports = {
   getAllOrders,
   getTutorWithdrawals,
   updateWithdrawalStatus,
+  getAdminDashboardData,
 };
