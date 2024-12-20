@@ -1,7 +1,8 @@
 const Student = require("../models/studentModel");
 const Tutor = require("../models/tutorModel");
 const Order = require("../models/orderModel");
-const Course = require("../models/courseModel")
+const Course = require("../models/courseModel");
+const CourseProgress = require("../models/courseProgressModel");
 
 const { comparePassword, hashPassword } = require("../utils/passwordUtils");
 
@@ -146,7 +147,7 @@ const getStudentPurchases = async (req, res) => {
       priceRange,
       startDate,
       endDate,
-      sortOrder = "desc", // Default to "New to Old"
+      sortOrder = "desc",
     } = req.query;
 
     const student_id = req.user.user_id;
@@ -299,69 +300,122 @@ const getStudentPurchases = async (req, res) => {
 };
 
 const getEnrolledCourses = async (req, res) => {
-	try {
-	  const { user_id } = req.user;
-	  const { search, sort, category, tutor, page = 1, limit = 12 } = req.query;
-	  const student = await Student.findOne({ user_id });
-	  if (!student) {
-		return res.status(404).json({ message: "Student not found" });
-	  }
-  
-	  if (!student.active_courses || student.active_courses.length === 0) {
-		return res.status(200).json({ courses: [] });
-	  }
-  
-	  const query = {
-		course_id: { $in: student.active_courses },
-		is_listed: true,
-	  };
-  
-	  if (search) {
-		query.title = { $regex: search, $options: "i" }; 
-	  }
-  
-	  if (category && category !== 'all') {
-		query.category_id = category;
-	  }
+  try {
+    const { user_id } = req.user;
+    const { search, sort, category, tutor, page = 1, limit = 12 } = req.query;
+    const student = await Student.findOne({ user_id });
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
 
-	  if (tutor && tutor !== 'all') {
-		query.tutor_id = tutor;
-	  }
+    if (!student.active_courses || student.active_courses.length === 0) {
+      return res.status(200).json({ courses: [] });
+    }
 
-  
-	  let sortOptions = {};
-	  if (sort) {
-		switch (sort) {
-		  case 'date_newest':
-			sortOptions.created_at = -1;
-			break;
-		  case 'date_oldest':
-			sortOptions.created_at = 1;
-			break;
-		  case 'title_asc':
-			sortOptions.title = 1;
-			break;
-		  case 'title_desc':
-			sortOptions.title = -1;
-			break;
-		  default:
-			sortOptions.createdAt = -1;
-		}
-	  }
-  
-	  const skip = (page - 1) * limit;
-  
-	  const coursesEnrolledByStudent = await Course.find(query)
-		.sort(sortOptions)
-		.skip(skip)
-		.limit(Number(limit));
-  
-	  return res.status(200).json({courses: coursesEnrolledByStudent, total_enrolled_courses: student.active_courses.length}); 
-	} catch (error) {
-	  console.error("Getting enrolled courses error:", error);
-	  return res.status(500).json({ message: "Error fetching enrolled courses" });
-	}
-  };  
+    const query = {
+      course_id: { $in: student.active_courses },
+      is_listed: true,
+    };
+
+    if (search) {
+      query.title = { $regex: search, $options: "i" };
+    }
+
+    if (category && category !== "all") {
+      query.category_id = category;
+    }
+
+    if (tutor && tutor !== "all") {
+      query.tutor_id = tutor;
+    }
+
+    let sortOptions = {};
+    if (sort) {
+      switch (sort) {
+        case "date_newest":
+          sortOptions.created_at = -1;
+          break;
+        case "date_oldest":
+          sortOptions.created_at = 1;
+          break;
+        case "title_asc":
+          sortOptions.title = 1;
+          break;
+        case "title_desc":
+          sortOptions.title = -1;
+          break;
+        default:
+          sortOptions.createdAt = -1;
+      }
+    }
+
+    const skip = (page - 1) * limit;
+
+    const coursesEnrolledByStudent = await Course.find(query)
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(Number(limit));
+
+    return res.status(200).json({
+      courses: coursesEnrolledByStudent,
+      total_enrolled_courses: student.active_courses.length,
+    });
+  } catch (error) {
+    console.error("Getting enrolled courses error:", error);
+    return res.status(500).json({ message: "Error fetching enrolled courses" });
+  }
+};
+
+//* =========== Datas For Student Home In a Single API Call =========== *//
+const getItemsForStudentHome = async (req, res) => {
+  try {
+    const { user_id } = req.user;
+    const studentData = await Student.findOne({ user_id });
+    if (!studentData) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+    const courseProgressions = await CourseProgress.find({
+      student_id: user_id,
+    });
+    const enrolledCourses = studentData.active_courses.length;
+    const completedCourses = courseProgressions.filter((courseProgress) =>
+      courseProgress.progress.every((lecture) => lecture.status === "completed")
+    ).length;
+    const coursesInProgress = enrolledCourses - completedCourses;
+    const completedQuizzes = courseProgressions.filter(
+      (courseProgress) => courseProgress.quiz_marks > 7
+    ).length;
+    const topRatedCourses = await Course.find(
+      {
+        is_listed: true,
+      },
+      {
+        _id: 0,
+        course_id: 1,
+        title: 1,
+        average_rating: 1,
+        ratings_count: 1,
+        course_thumbnail: 1,
+        category_id: 1,
+        price: 1,
+        enrolled_count: 1,
+      }
+    )
+      .sort({ enrolled_count: -1, average_rating: -1 })
+      .limit(3)
+      .populate("category_id", "title");
+    res.status(200).json({
+      topRatedCourses,
+      completedQuizzes,
+      coursesInProgress,
+      completedCourses,
+      enrolledCourses,
+    });
+  } catch (error) {
+    console.error("Error fetching items for student home:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
 
 module.exports = {
   updateStudent,
@@ -369,4 +423,5 @@ module.exports = {
   getAllTutorsForStudents,
   getStudentPurchases,
   getEnrolledCourses,
+  getItemsForStudentHome,
 };

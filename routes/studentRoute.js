@@ -7,7 +7,8 @@ const {
   getStudentDetails,
   getAllTutorsForStudents,
   getStudentPurchases,
-  getEnrolledCourses
+  getEnrolledCourses,
+  getItemsForStudentHome
 } = require("../controllers/studentController");
 
 studentRouter
@@ -15,6 +16,7 @@ studentRouter
   .get("/get-student-details/:student_id", verifyStudent, getStudentDetails)
   .get("/get-tutors", verifyStudent, getAllTutorsForStudents)
   .get("/get-purchases", verifyStudent, getStudentPurchases)
-  .get("/get-enrolled-courses", verifyStudent, getEnrolledCourses);
+  .get("/get-enrolled-courses", verifyStudent, getEnrolledCourses)
+  .get("/get-items-for-home", verifyStudent, getItemsForStudentHome);
 
 module.exports = studentRouter;
