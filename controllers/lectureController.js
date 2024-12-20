@@ -38,7 +38,8 @@ const updateLecture = async (req, res) => {
   const { ...updatedData } = req.body;
   const { lecture_id } = req.params;
   try {
-    if (Object.keys(updatedData).includes("pdf_notes")) updatedData.lecture_note = updatedData.pdf_notes;
+    if (Object.keys(updatedData).includes("pdf_notes"))
+      updatedData.lecture_note = updatedData.pdf_notes;
 
     // console.log("LECTURE DETAILS NEW", updatedData, "lecture id", lecture_id);
 
@@ -59,7 +60,7 @@ const updateLecture = async (req, res) => {
 
 const getLecturesByCourseIdForStudent = async (req, res) => {
   const { course_id } = req.params;
-  const { user_id } = req.user
+  const { user_id } = req.user;
 
   if (!user_id)
     return res.status(400).json({ message: "Student ID is required." });
@@ -98,6 +99,28 @@ const getLecturesByCourseIdForStudent = async (req, res) => {
   }
 };
 
+const getLecturesByCourseIdForTutor = async (req, res) => {
+  const { course_id } = req.params;
+  const { user_id } = req.user;
+  try {
+    if (!user_id)
+      return res.status(400).json({ message: "Tutor ID is required." });
+    if (!course_id)
+      return res.status(400).json({ message: "Course ID is required." });
+    const course = await Course.findOne({
+      $and: [{ course_id }, { tutor_id: user_id }],
+    });
+    if (!course) return res.status(404).json({ message: "Course not found!" });
+    const lectures = await Lecture.find({ course_id });
+    if (lectures) {
+      return res
+        .status(200)
+        .json({ message: "Lectures fetched successfully!", lectures });
+    }
+  } catch (error) {
+    console.log("Lecture Fetching Error: ", error);
+  }
+};
 // const deleteLecture = async (req, res) => {
 // 	const { lecture_id } = req.params;
 // 	try {
@@ -116,16 +139,5 @@ module.exports = {
   addLecture,
   updateLecture,
   getLecturesByCourseIdForStudent,
+  getLecturesByCourseIdForTutor
 };
-
-// _id: 'lecture17324358904631732436888438',
-// course_id: 'course17324354134121732436330752',
-// title: 'Lecture 1dawdawd',
-// description: 'wdadawdwada wadawd awd awd aw',
-// duration: '0:05',
-// video_preview: 'blob:http://localhost:5173/e7fed0ac-4617-418f-8ce8-048473c19e85',
-// video_title: 'TEst vudei.mp4',
-// video: 'https://res.cloudinary.com/edueden/video/upload/v1732452558/lecture_videos/lecture_video_TEstvudei.mp4_1732452547795.mp4',
-// thumbnail: 'https://res.cloudinary.com/edueden/image/upload/v1732452563/lecture_thumbnails/lecture_thumbnail_ResetPassImage.png_1732452560291.png',
-// pdf_notes: 'https://res.cloudinary.com/edueden/raw/upload/v1732452559/lecture_pdf_notes/lecture_notes_lecture_notes_Week8_React21.do_1732452559640.docx'
-// }

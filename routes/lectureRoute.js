@@ -7,6 +7,7 @@ const {
   addLecture,
   updateLecture,
   getLecturesByCourseIdForStudent,
+  getLecturesByCourseIdForTutor
 } = require("../controllers/lectureController");
 
 lectureRouter
@@ -16,6 +17,11 @@ lectureRouter
     "/get-by-course_id/:course_id",
     verifyUserBasedOnQuery,
     getLecturesByCourseIdForStudent
+  )
+  .get(
+    "/get-courses-for-tutors/:course_id",
+    verifyUserBasedOnQuery,
+    getLecturesByCourseIdForTutor
   );
 
 module.exports = lectureRouter;
