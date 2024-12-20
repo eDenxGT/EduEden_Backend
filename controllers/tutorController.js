@@ -10,7 +10,6 @@ const updateTutor = async (req, res) => {
   try {
     const { tutorId, currentPassword, newPassword, ...updatedFields } =
       req.body;
-    console.log(updatedFields);
     const tutor = await Tutor.findById(tutorId);
     if (!tutor) {
       return res.status(404).json({ message: "Tutor not found" });

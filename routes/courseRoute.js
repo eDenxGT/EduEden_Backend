@@ -16,12 +16,12 @@ const {
   updateCourseReviews,
 } = require("../controllers/courseController");
 
-const { verifyUserBasedOnQuery } = require("../middlewares/auth");
+const { verifyUserBasedOnQuery, verifyTutor } = require("../middlewares/auth");
 
 courseRouter
   .post("/new", createCourse)
   .put("/update/:course_id", updateCourse)
-  .get("/my-courses/:tutor_id", getCoursesByTutorId)
+  .get("/my-courses/:tutor_id", verifyTutor, getCoursesByTutorId)
   .get("/get-all", getAllCourses)
   .get("/get-listed", getAllListedCourses)
   .get("/get/:course_id", verifyUserBasedOnQuery, getCourseByCourseId)

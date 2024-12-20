@@ -5,6 +5,7 @@ const Student = require("../models/studentModel");
 const CourseProgress = require("../models/courseProgressModel");
 
 const { setupQuiz } = require("../controllers/quizController");
+const { default: mongoose } = require("mongoose");
 
 const createCourse = async (req, res) => {
   const {
@@ -121,48 +122,84 @@ const updateCourse = async (req, res) => {
 const getCoursesByTutorId = async (req, res) => {
   try {
     const { tutor_id } = req.params;
-    const courses = await Course.aggregate([
-      { $match: { tutor_id } },
-      {
-        $lookup: {
-          from: "categories",
-          localField: "category_id",
-          foreignField: "_id",
-          as: "category",
+    const {
+      search,
+      sort,
+      category,
+      page = 1,
+      limit = 12,
+      listing_status,
+    } = req.query;
+    console.log(req.query, req.params);
+    const filters = { tutor_id };
+    if (search) {
+      filters.title = { $regex: search, $options: "i" };
+    }
+    if (category && category !== "all") {
+      filters.category_id = new mongoose.Types.ObjectId(category);
+    }
+    if (listing_status !== "all") {
+      filters.is_listed = listing_status === "listed";
+    }
+
+    let sortStage = {};
+    if (sort === "date_newest") sortStage.created_at = -1;
+    if (sort === "date_oldest") sortStage.created_at = 1;
+    if (sort === "title_asc") sortStage.title = 1;
+    if (sort === "title_desc") sortStage.title = -1;
+    if (sort === "price_low_to_high") sortStage.price = 1;
+    if (sort === "price_high_to_low") sortStage.price = -1;
+
+    const skip = (page - 1) * limit;
+    console.log(filters);
+    const [courses, total] = await Promise.all([
+      Course.aggregate([
+        { $match: filters },
+        {
+          $lookup: {
+            from: "categories",
+            localField: "category_id",
+            foreignField: "_id",
+            as: "category",
+          },
         },
-      },
-      {
-        $unwind: "$category",
-      },
-      {
-        $project: {
-          course_id: 1,
-          title: 1,
-          category: "$category.title",
-          duration: 1,
-          language: 1,
-          level: 1,
-          course_description: 1,
-          course_thumbnail: 1,
-          price: 1,
-          enrolled_count: 1,
-          is_listed: 1,
-          created_at: 1,
-          updated_at: 1,
-          average_rating: 1,
-          ratings_count: 1,
+        { $unwind: "$category" },
+        {
+          $project: {
+            course_id: 1,
+            title: 1,
+            category: "$category.title",
+            category_id: 1,
+            duration: 1,
+            language: 1,
+            level: 1,
+            course_description: 1,
+            course_thumbnail: 1,
+            price: 1,
+            enrolled_count: 1,
+            is_listed: 1,
+            created_at: 1,
+            updated_at: 1,
+            average_rating: 1,
+            ratings_count: 1,
+          },
         },
-      },
+        ...(Object.keys(sortStage).length ? [{ $sort: sortStage }] : []),
+        { $skip: skip },
+        { $limit: parseInt(limit) },
+      ]),
+      Course.countDocuments(filters),
     ]);
 
-    // console.log(courses);
+    console.log(courses, total);
 
-    return res.status(200).json({ courses });
+    return res.status(200).json({ courses, total });
   } catch (error) {
-    console.log("Get Courses By Tutor Id error : ", error);
+    console.error("Error fetching tutor courses:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 const getCoursesByStudentId = async (req, res) => {
   try {
     const { student_id } = req.params;
@@ -259,13 +296,13 @@ const getCourseByCourseId = async (req, res) => {
     const { user_id } = req.user;
     console.log(user_id);
 
-    if(apiFor === "studentPurchasedCourse") {
+    if (apiFor === "studentPurchasedCourse") {
       const student = await Student.findOne({ user_id });
-      console.log(student)
-      if(!student) {
+      console.log(student);
+      if (!student) {
         return res.status(404).json({ message: "Student not found" });
       }
-      if(!student.active_courses.includes(course_id)) {
+      if (!student.active_courses.includes(course_id)) {
         return res.status(404).json({ message: "Course not found" });
       }
     }
@@ -330,17 +367,16 @@ const getCourseByCourseId = async (req, res) => {
       return res.status(404).json({ message: "Course not found" });
     }
 
-    if(apiFor === "studentSingleCourse") {
-      if(course[0].is_listed === false) {
+    if (apiFor === "studentSingleCourse") {
+      if (course[0].is_listed === false) {
         return res.status(404).json({ message: "Course not found" });
       }
       return res.status(200).json({ course: course[0] });
     }
-    
 
     return res.status(200).json({ course: course[0] });
   } catch (error) {
-    console.log(req.user)
+    console.log(req.user);
     console.log("Get Course By Course Id error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
