@@ -8,7 +8,8 @@ const {
   getAllTutorsForStudents,
   getStudentPurchases,
   getEnrolledCourses,
-  getItemsForStudentHome
+  getItemsForStudentHome,
+  getLandingPageData
 } = require("../controllers/studentController");
 
 studentRouter
@@ -17,6 +18,7 @@ studentRouter
   .get("/get-tutors", verifyStudent, getAllTutorsForStudents)
   .get("/get-purchases", verifyStudent, getStudentPurchases)
   .get("/get-enrolled-courses", verifyStudent, getEnrolledCourses)
-  .get("/get-items-for-home", verifyStudent, getItemsForStudentHome);
+  .get("/get-items-for-home", verifyStudent, getItemsForStudentHome)
+  .get("/landing-page-data", getLandingPageData)
 
 module.exports = studentRouter;

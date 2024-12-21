@@ -417,6 +417,82 @@ const getItemsForStudentHome = async (req, res) => {
   }
 };
 
+const getLandingPageData = async (req, res) => {
+  try {
+    const topRatedCourses = await Course.aggregate([
+      {
+        $sort: { average_rating: -1 },
+      },
+      {
+        $limit: 5,
+      },
+      {
+        $project: {
+          title: 1,
+          average_ratings: 1,
+          course_thumbnail: 1,
+          price: 1,
+          ratings_count: 1,
+          enrolled_count: 1,
+          average_rating: 1,
+        },
+      },
+    ]);
+
+    const bestSellingCourses = await Course.aggregate([
+      {
+        $sort: { enrolled_count: -1 },
+      },
+      {
+        $limit: 5,
+      },
+      {
+        $project: {
+          title: 1,
+          enrolled_count: 1,
+          course_thumbnail: 1,
+          price: 1,
+          ratings_count: 1,
+          enrolled_count: 1,
+          average_rating: 1,
+        },
+      },
+    ]);
+
+    // Events (Uncomment if needed in the future)
+    // const events = await Event.aggregate([
+    //   {
+    //     $sort: { date: 1 },
+    //   },
+    //   {
+    //     $limit: 5,
+    //   },
+    //   {
+    //     $project: {
+    //       title: 1,
+    //       date: 1,
+    //       location: 1,
+    //       created_at: 1,
+    //     },
+    //   },
+    // ]);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        topRatedCourses,
+        bestSellingCourses,
+        // events, // Uncomment if events data is included
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching landing page data:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Server error. Please try again later." });
+  }
+};
+
 module.exports = {
   updateStudent,
   getStudentDetails,
@@ -424,4 +500,5 @@ module.exports = {
   getStudentPurchases,
   getEnrolledCourses,
   getItemsForStudentHome,
+  getLandingPageData,
 };
