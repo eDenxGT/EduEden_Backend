@@ -7,10 +7,16 @@ const chalk = require("chalk");
 const session = require("express-session");
 const nocache = require("nocache");
 const cookieParser = require("cookie-parser");
+const fs = require('fs');
+const https = require('https');
 
 // *===== Initializing Server ====== *//
 const app = express();
-const server = require("http").Server(app);
+// const server = require("http").Server(app);
+const server = https.createServer({
+	key: fs.readFileSync('/etc/letsencrypt/live/edengt.in/privkey.pem'),  
+	cert: fs.readFileSync('/etc/letsencrypt/live/edengt.in/fullchain.pem') 
+  }, app);
 
 // *===== Initialize Socket ====== *//
 const { initializeSocket } = require("./socket/socketEvents");
