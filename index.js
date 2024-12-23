@@ -14,8 +14,8 @@ const https = require('https');
 const app = express();
 // const server = require("http").Server(app);
 const server = https.createServer({
-	key: fs.readFileSync('/etc/letsencrypt/live/edengt.in/privkey.pem'),  
-	cert: fs.readFileSync('/etc/letsencrypt/live/edengt.in/fullchain.pem') 
+	key: fs.readFileSync('/etc/letsencrypt/live/edengt.in/privkey.pem'),
+	cert: fs.readFileSync('/etc/letsencrypt/live/edengt.in/fullchain.pem'),
   }, app);
 
 // *===== Initialize Socket ====== *//
