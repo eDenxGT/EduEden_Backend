@@ -542,8 +542,8 @@ const getAllCoursesForAdminSide = async (req, res) => {
     }
 
     const sortOptions = {};
-    if (sort === "date_newest") sortOptions.created_at = -1;
-    if (sort === "date_oldest") sortOptions.created_at = 1;
+    if (sort === "latest") sortOptions.created_at = -1;
+    if (sort === "oldest") sortOptions.created_at = 1;
     if (sort === "title_asc") sortOptions.title = 1;
     if (sort === "title_desc") sortOptions.title = -1;
     if (sort === "price_low_to_high") sortOptions.price = 1;
