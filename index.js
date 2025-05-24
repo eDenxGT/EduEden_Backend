@@ -12,11 +12,11 @@ const https = require('https');
 
 // *===== Initializing Server ====== *//
 const app = express();
-// const server = require("http").Server(app);
-const server = https.createServer({
-	key: fs.readFileSync('/home/ubuntu/ssl/privkey.pem'),
-	cert: fs.readFileSync('/home/ubuntu/ssl/fullchain.pem'),
-  }, app);
+const server = require("http").Server(app);
+// const server = https.createServer({
+// 	key: fs.readFileSync('/home/ubuntu/ssl/privkey.pem'),
+// 	cert: fs.readFileSync('/home/ubuntu/ssl/fullchain.pem'),
+//   }, app);
 
 // *===== Initialize Socket ====== *//
 const { initializeSocket } = require("./socket/socketEvents");

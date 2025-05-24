@@ -60,6 +60,7 @@ const deleteCategory = async (req, res) => {
     if (!deletedCategory) {
       return res.status(404).json({ message: "Category not found" });
     }
+    const deletedCoursesOfDeletedCategory = await Course.deleteMany({category_id: id})
     return res
       .status(200)
       .json({ message: "Category deleted successfully", categoryId: id });
@@ -118,6 +119,7 @@ const updateCategory = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 module.exports = {
   createCategory,
