@@ -5,6 +5,7 @@ const Course = require("../models/courseModel");
 const Withdrawal = require("../models/withdrawalModel");
 
 const { comparePassword, hashPassword } = require("../utils/passwordUtils");
+const STATUS_CODE  = require("../constants/statusCode");
 
 const updateTutor = async (req, res) => {
   try {
@@ -12,7 +13,7 @@ const updateTutor = async (req, res) => {
       req.body;
     const tutor = await Tutor.findById(tutorId);
     if (!tutor) {
-      return res.status(404).json({ message: "Tutor not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Tutor not found" });
     }
 
     if (
@@ -28,7 +29,7 @@ const updateTutor = async (req, res) => {
       });
 
       if (existingTutor || existingStudent) {
-        return res.status(400).json({ message: "Username already exists" });
+        return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Username already exists" });
       }
     }
 
@@ -42,7 +43,7 @@ const updateTutor = async (req, res) => {
       });
 
       if (existingTutor || existingStudent) {
-        return res.status(400).json({ message: "Email already exists" });
+        return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Email already exists" });
       }
     }
 
@@ -56,7 +57,7 @@ const updateTutor = async (req, res) => {
       });
 
       if (existingTutor || existingStudent) {
-        return res.status(400).json({ message: "Phone number already exists" });
+        return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Phone number already exists" });
       }
     }
 
@@ -66,9 +67,9 @@ const updateTutor = async (req, res) => {
         tutor.password
       );
       if (!isPasswordValid) {
-        return res.status(401).json({ message: "Invalid current password" });
+        return res.status(STATUS_CODE.UNAUTHORIZED).json({ message: "Invalid current password" });
       } else if (currentPassword === newPassword) {
-        return res.status(400).json({
+        return res.status(STATUS_CODE.BAD_REQUEST).json({
           message: "New password cannot be the same as the current password",
         });
       }
@@ -114,13 +115,13 @@ const updateTutor = async (req, res) => {
 
     const { password: _, ...tutorWithoutPassword } = tutor.toObject();
 
-    res.status(200).json({
+    res.status(STATUS_CODE.OK).json({
       message: "Profile updated successfully",
       tutorData: tutorWithoutPassword,
     });
   } catch (error) {
     console.error("Error updating tutor:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -130,7 +131,7 @@ const getTutorDetails = async (req, res) => {
     const { apiFor } = req.query;
     const tutor = await Tutor.findOne({ user_id });
     if (!tutor) {
-      return res.status(404).json({ message: "Tutor not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Tutor not found" });
     }
     if (apiFor === "earningsPage") {
       const tutorDetailsToSent = {
@@ -140,12 +141,12 @@ const getTutorDetails = async (req, res) => {
         card: tutor?.card_details || null,
       };
       console.log("dwadaww", tutorDetailsToSent);
-      return res.status(200).json({ details: tutorDetailsToSent });
+      return res.status(STATUS_CODE.OK).json({ details: tutorDetailsToSent });
     }
-    res.status(200).json({ tutor });
+    res.status(STATUS_CODE.OK).json({ tutor });
   } catch (error) {
     console.error("Error retrieving tutor details:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -155,7 +156,7 @@ const getTutorEarnings = async (req, res) => {
     const tutor = await Tutor.findOne({ user_id });
     console.log(tutor, user_id);
     if (!tutor) {
-      return res.status(404).json({ message: "Tutor not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Tutor not found" });
     }
 
     const earnings = {
@@ -163,10 +164,10 @@ const getTutorEarnings = async (req, res) => {
       total_withdrawn_amount: tutor?.withdrawn_amount,
       current_balance: tutor?.total_revenue - tutor?.withdrawn_amount,
     };
-    res.status(200).json({ earnings });
+    res.status(STATUS_CODE.OK).json({ earnings });
   } catch (error) {
     console.error("Error retrieving tutor earnings:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -175,14 +176,14 @@ const getTutorWithdrawals = async (req, res) => {
     const { user_id } = req.user;
     const withdrawals = await Withdrawal.find({ tutor_id: user_id });
     if (!withdrawals) {
-      return res.status(404).json({ message: "Tutor not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Tutor not found" });
     }
     withdrawals.sort((a, b) => b.requested_at - a.requested_at);
     console.log(withdrawals);
-    res.status(200).json({ withdrawals });
+    res.status(STATUS_CODE.OK).json({ withdrawals });
   } catch (error) {
     console.error("Error retrieving tutor withdrawals:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -212,20 +213,20 @@ const withdrawTutorEarnings = async (req, res) => {
         requested_at: Date.now(),
       });
     } else {
-      return res.status(400).json({ message: "Invalid payment method" });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Invalid payment method" });
     }
 
     tutor.withdrawn_amount += Number(amount);
     await tutor.save();
     res
-      .status(200)
+      .status(STATUS_CODE.OK)
       .json({
         message: "Withdrawal Request Submitted. Wait for the approval",
         withdrawal,
       });
   } catch (error) {
     console.error("Error withdrawing tutor earnings:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -236,14 +237,14 @@ const addCard = async (req, res) => {
     console.log("carddetails", card);
     const tutor = await Tutor.findOne({ user_id });
     if (!tutor) {
-      return res.status(404).json({ message: "Tutor not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Tutor not found" });
     }
     tutor.card_details = card;
     await tutor.save();
-    res.status(200).json({ message: "Card added successfully" });
+    res.status(STATUS_CODE.OK).json({ message: "Card added successfully" });
   } catch (error) {
     console.error("Error adding card:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -253,7 +254,7 @@ const getCourseDetailsByTutorId = async (req, res) => {
     const { apiFor } = req.query;
     const courses = await Course.find({ tutor_id: user_id });
     if (!courses) {
-      return res.status(404).json({ message: "Course not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Course not found" });
     }
     if (apiFor === "earningsPage") {
       const coursesDetailsToSent = courses.map((course) => ({
@@ -261,12 +262,12 @@ const getCourseDetailsByTutorId = async (req, res) => {
         course_id: course?.course_id,
         total_revenue: course?.enrolled_count * course?.price,
       }));
-      return res.status(200).json({ courses: coursesDetailsToSent });
+      return res.status(STATUS_CODE.OK).json({ courses: coursesDetailsToSent });
     }
-    res.status(200).json({ courses });
+    res.status(STATUS_CODE.OK).json({ courses });
   } catch (error) {
     console.error("Error retrieving course details:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 

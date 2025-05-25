@@ -1,3 +1,4 @@
+const STATUS_CODE  = require("../constants/statusCode");
 const Cart = require("../models/cartModel");
 const Wishlist = require("../models/wishlistModel");
 
@@ -31,10 +32,10 @@ const getCartItemsByUserId = async (req, res) => {
 		 console.log(cart);
 		 
 
-		return res.status(200).json({ cart: cart[0] });
+		return res.status(STATUS_CODE.OK).json({ cart: cart[0] });
 	} catch (error) {
 		console.error(error);
-		return res.status(500).json({ message: "Error retrieving cart items" });
+		return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Error retrieving cart items" });
 	}
 };
 
@@ -48,7 +49,7 @@ const addCartItem = async (req, res) => {
 
 		if (cart.courses.some((course) => course.course_id === course_id)) {
 			return res
-				.status(400)
+				.status(STATUS_CODE.BAD_REQUEST)
 				.json({ message: "Course already exists in cart" });
 		}
 
@@ -66,11 +67,11 @@ const addCartItem = async (req, res) => {
 			},
 		]);
 
-		return res.status(200).json({ cart: cartToSent[0] });
+		return res.status(STATUS_CODE.OK).json({ cart: cartToSent[0] });
 	} catch (error) {
 		console.error(error);
 		return res
-			.status(500)
+			.status(STATUS_CODE.INTERNAL_SERVER_ERROR)
 			.json({ message: "Failed to add course to cart" });
 	}
 };
@@ -99,11 +100,11 @@ const removeCartItem = async (req, res) => {
 				},
 			},
 		]);
-		return res.status(200).json({ cart: cartToSent[0] });
+		return res.status(STATUS_CODE.OK).json({ cart: cartToSent[0] });
 	} catch (error) {
 		console.error(error);
 		return res
-			.status(500)
+			.status(STATUS_CODE.INTERNAL_SERVER_ERROR)
 			.json({ message: "Failed to remove course from cart" });
 	}
 };

@@ -6,6 +6,7 @@ const Tutor = require("../models/tutorModel");
 const FRONTEND_URL = process.env.CLIENT_URL;
 
 const ethenAiModel = require("../config/ethenAi");
+const STATUS_CODE  = require("../constants/statusCode");
 
 const getChatsByUserId = async (req, res) => {
   try {
@@ -45,10 +46,10 @@ const getChatsByUserId = async (req, res) => {
     ]);
     //   console.log(chats)
 
-    res.status(200).json(chats);
+    res.status(STATUS_CODE.OK).json(chats);
   } catch (error) {
     console.error("Error fetching chats:", error);
-    res.status(500).json({ message: error.message });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: error.message });
   }
 };
 
@@ -57,9 +58,9 @@ const getMessagesByChatId = async (req, res) => {
     const { chat_id } = req.params;
     const messages = await Message.find({ chat_id });
     // console.log(messages);
-    res.status(200).json(messages);
+    res.status(STATUS_CODE.OK).json(messages);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: error.message });
   }
 };
 
@@ -107,10 +108,10 @@ const createChat = async (req, res) => {
       },
     ]);
 
-    res.status(200).json(chatToSent[0] || {});
+    res.status(STATUS_CODE.OK).json(chatToSent[0] || {});
   } catch (error) {
     console.error("Error creating chat:", error);
-    res.status(500).json({ message: error.message });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: error.message });
   }
 };
 
@@ -118,9 +119,9 @@ const deleteChat = async (req, res) => {
   try {
     const { chat_id } = req.params;
     const chat = await Chat.findByIdAndDelete(chat_id);
-    res.status(200).json(chat);
+    res.status(STATUS_CODE.OK).json(chat);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: error.message });
   }
 };
 
@@ -140,9 +141,9 @@ const createMessage = async (req, res) => {
       $inc: { unread_message_count: 1 },
     });
 
-    res.status(201).json(newMessage);
+    res.status(STATUS_CODE.CREATED).json(newMessage);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: error.message });
   }
 };
 
@@ -182,10 +183,10 @@ const getStudentsByTutorId = async (req, res) => {
       },
     ]);
 
-    return res.status(200).json(students);
+    return res.status(STATUS_CODE.OK).json(students);
   } catch (error) {
     console.log("Getting students by tutorID error:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -238,10 +239,10 @@ const getTutorsByStudentId = async (req, res) => {
     ]);
     //   console.log("TUTORE",findTutors);
 
-    res.status(200).json(findTutors);
+    res.status(STATUS_CODE.OK).json(findTutors);
   } catch (error) {
     console.error("Error fetching tutors by student ID:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -253,7 +254,7 @@ const markMessageAsRead = async (req, res) => {
     const isStudent = user_role === "student";
 
     if (!chat) {
-      return res.status(404).json({ message: "Chat not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Chat not found" });
     }
 
     isStudent
@@ -262,10 +263,10 @@ const markMessageAsRead = async (req, res) => {
 
     await chat.save();
 
-    res.status(200).json({ message: "Message marked as read" });
+    res.status(STATUS_CODE.OK).json({ message: "Message marked as read" });
   } catch (error) {
     console.error("Error marking message as read:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -313,12 +314,12 @@ const handleEthenAIBotChat = async (req, res) => {
 
     // console.log("AI Response:", aiResponse);
 
-    res.status(200).json({
+    res.status(STATUS_CODE.OK).json({
       reply: aiResponse,
     });
   } catch (error) {
     console.error("Error handling bot chat:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 

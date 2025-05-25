@@ -7,9 +7,11 @@ const Lecture = require("../models/lectureModel");
 const Course = require("../models/courseModel");
 const CourseProgress = require("../models/courseProgressModel");
 const Tutor = require("../models/tutorModel");
+const STATUS_CODE  = require("../constants/statusCode");
 
 const createOrder = async (req, res) => {
   const { amount, ...rest } = req.body;
+
   const isCourseAvailable = await Course.find({
     $and: [
       { course_id: { $in: rest.courses.map((course) => course.course_id) } },
@@ -18,12 +20,12 @@ const createOrder = async (req, res) => {
   });
   if (!isCourseAvailable.length) {
     return res
-      .status(400)
+      .status(STATUS_CODE.BAD_REQUEST)
       .json({ message: `Course not available at the moment` });
   }
   if (isCourseAvailable.length !== rest.courses.length) {
     return res
-      .status(400)
+      .status(STATUS_CODE.BAD_REQUEST)
       .json({ message: `Some of the courses are not available` });
   }
 
@@ -33,7 +35,7 @@ const createOrder = async (req, res) => {
   });
   if (isCourseAlreadyEnrolled) {
     return res
-      .status(400)
+      .status(STATUS_CODE.BAD_REQUEST)
       .json({ message: `You are already enrolled in this course` });
   }
 
@@ -57,10 +59,10 @@ const createOrder = async (req, res) => {
     });
 
     await newOrder.save();
-    res.status(200).json(order);
+    res.status(STATUS_CODE.OK).json(order);
   } catch (error) {
     console.error("Razorpay Order Error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ error: error.message });
   }
 };
 
@@ -130,7 +132,7 @@ const verifyPayment = async (req, res) => {
         progressDocs
       );
       if (!courseProgressUpdated || courseProgressUpdated.length === 0) {
-        return res.status(500).json({ error: "Course Progress not updated" });
+        return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ error: "Course Progress not updated" });
       }
       await Cart.updateMany(
         { user_id: order.student_id },
@@ -172,19 +174,19 @@ const verifyPayment = async (req, res) => {
         console.error("Error updating tutor revenues :", error);
       }
 
-      res.status(200).json({
+      res.status(STATUS_CODE.OK).json({
         success: true,
         message: "Payment verified and courses enrolled successfully",
       });
     } else {
-      res.status(400).json({
+      res.status(STATUS_CODE.BAD_REQUEST).json({
         success: false,
         message: "Payment verification failed",
       });
     }
   } catch (error) {
     console.error("Payment Verification Error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ error: error.message });
   }
 };
 
@@ -209,12 +211,12 @@ const updateOrderStatus = async (req, res) => {
   try {
     const order = await Order.findOne({ order_id });
     if (!order) {
-      return res.status(404).json({ message: "Order not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Order not found" });
     }
     order.status = status;
     await order.save();
     return res
-      .status(200)
+      .status(STATUS_CODE.OK)
       .json({ message: "Order status updated successfully" });
   } catch (error) {
     console.error("Error updating order status:", error);

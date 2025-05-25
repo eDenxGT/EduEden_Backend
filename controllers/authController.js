@@ -25,6 +25,7 @@ const {
   generateRefreshToken,
 } = require("../utils/JWT/generateTokens");
 const { sendPhoneVerification } = require("../utils/smsUtils");
+const STATUS_CODE  = require("../constants/statusCode");
 
 const FRONTEND_URL = process.env.CLIENT_URL;
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -53,7 +54,7 @@ const studentSignUp = async (req, res) => {
     });
 
     if (isUserExists || isUserVerified || isTutorExists) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "User already exists" });
     }
     const hashedPassword = await hashPassword(password);
 
@@ -77,12 +78,12 @@ const studentSignUp = async (req, res) => {
 
     await sendOTPEmail(email, otp);
 
-    return res.status(201).json({
+    return res.status(STATUS_CODE.CREATED).json({
       message: "OTP sent to your email.",
     });
   } catch (error) {
     console.log("SignUp Error: ", error);
-    res.status(500).json({ message: "Something went wrong" });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Something went wrong" });
   }
 };
 
@@ -100,7 +101,7 @@ const studentSignIn = async (req, res) => {
 
     if (isTutorAccount) {
       return res
-        .status(400)
+        .status(STATUS_CODE.BAD_REQUEST)
         .json({ message: "This account is a tutor account" });
     }
 
@@ -110,28 +111,28 @@ const studentSignIn = async (req, res) => {
 
     if (isUserUnverified && isUserUnverified.role !== "student") {
       return res
-        .status(400)
+        .status(STATUS_CODE.BAD_REQUEST)
         .json({ message: "This account is a tutor account" });
     }
 
     if (isUserUnverified) {
       return res
-        .status(403)
+        .status(STATUS_CODE.FORBIDDEN)
         .json({ not_verified: true, message: "Verify your email" });
     }
 
     if (!student && !isUserUnverified) {
-      return res.status(400).json({ message: "Account not found" });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Account not found" });
     }
 
     const isMatch = await comparePassword(password, student?.password);
 
     if (!isMatch) {
-      return res.status(400).json({ message: "Incorrect Password" });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Incorrect Password" });
     }
 
     if (student.is_blocked) {
-      return res.status(401).json({
+      return res.status(STATUS_CODE.UNAUTHORIZED).json({
         message:
           "Your account has been blocked. Please contact the support team.",
       });
@@ -174,7 +175,7 @@ const studentSignIn = async (req, res) => {
         res
       );
 
-      res.status(200).json({
+      res.status(STATUS_CODE.OK).json({
         success: true,
         message: "Student login successfully",
         studentData: studentDetails,
@@ -184,7 +185,7 @@ const studentSignIn = async (req, res) => {
     }
   } catch (error) {
     console.log("SignIn Error: ", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -195,15 +196,15 @@ const verifyOtp = async (req, res) => {
     const unverifiedUser = await UnverifiedUser.findOne({ email });
 
     if (!unverifiedUser) {
-      return res.status(400).json({ message: "User not found." });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "User not found." });
     }
 
     if (unverifiedUser.otp != otp) {
-      return res.status(400).json({ message: "Invalid OTP" });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Invalid OTP" });
     }
 
     if (Date.now() > unverifiedUser.otpExpiry) {
-      return res.status(400).json({ message: "OTP has expired" });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "OTP has expired" });
     }
     const randomPart = Math.random().toString(36).substring(2, 6);
     const timestampPart = Date.now().toString().slice(-4);
@@ -243,14 +244,14 @@ const verifyOtp = async (req, res) => {
 
     await UnverifiedUser.deleteOne({ email });
 
-    res.status(200).json({
+    res.status(STATUS_CODE.OK).json({
       message: "Email verified successfully.",
       userData: otherDetails,
       token: token,
     });
   } catch (error) {
     console.log("OTP Verification Error: ", error);
-    res.status(500).json({ message: "Something went wrong" });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Something went wrong" });
   }
 };
 
@@ -261,14 +262,14 @@ const resendOtp = async (req, res) => {
 
     if (!unverifiedUser) {
       return res
-        .status(404)
+        .status(STATUS_CODE.NOT_FOUND)
         .json({ success: false, message: "User not found." });
     }
 
     if (unverifiedUser.role !== role && role === "student") {
-      return res.status(400).json({ message: "This is a Tutor Account" });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "This is a Tutor Account" });
     } else if (unverifiedUser.role !== role && role === "tutor") {
-      return res.status(400).json({ message: "This is a Student Account" });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "This is a Student Account" });
     }
 
     const remainingTime = unverifiedUser.otpExpiry - Date.now();
@@ -284,13 +285,13 @@ const resendOtp = async (req, res) => {
 
     await sendOTPEmail(email, unverifiedUser.otp);
 
-    return res.status(200).json({
+    return res.status(STATUS_CODE.OK).json({
       success: true,
       message: "OTP resent successfully.",
     });
   } catch (error) {
     console.log("OTP Resent error: ", error.message);
-    return res.status(500).json({
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({
       success: false,
       message: "Internal server error while resending OTP.",
     });
@@ -392,11 +393,11 @@ const googleAuth = async (req, res) => {
   const { token, role } = req.body;
 
   if (!token || !role) {
-    return res.status(400).json({ error: "Token and role are required" });
+    return res.status(STATUS_CODE.BAD_REQUEST).json({ error: "Token and role are required" });
   }
 
   if (!["student", "tutor"].includes(role)) {
-    return res.status(400).json({ error: "Invalid role specified" });
+    return res.status(STATUS_CODE.BAD_REQUEST).json({ error: "Invalid role specified" });
   }
 
   try {
@@ -414,7 +415,7 @@ const googleAuth = async (req, res) => {
 
     if (!payload.email_verified) {
       console.log("Unverified email: ", payload.email);
-      return res.status(401).json({ message: "Email not verified" });
+      return res.status(STATUS_CODE.UNAUTHORIZED).json({ message: "Email not verified" });
     }
 
     const { name, email, sub, picture } = payload;
@@ -429,7 +430,7 @@ const googleAuth = async (req, res) => {
     })();
 
     if (isOtherRoleExists) {
-      return res.status(401).json({
+      return res.status(STATUS_CODE.UNAUTHORIZED).json({
         message: `This account is a ${
           role === "student" ? "Tutor" : "Student"
         } account.`,
@@ -441,7 +442,7 @@ const googleAuth = async (req, res) => {
     let user = await User.findOne({ email });
 
     if (user && user.is_blocked) {
-      return res.status(401).json({
+      return res.status(STATUS_CODE.UNAUTHORIZED).json({
         message:
           "Your account has been blocked. Please contact the support team.",
       });
@@ -449,12 +450,12 @@ const googleAuth = async (req, res) => {
     
     if (role === "tutor") {
       if (user.is_identity_verified === "pending") {
-        return res.status(403).json({
+        return res.status(STATUS_CODE.FORBIDDEN).json({
           message: "Account verification in progress. Please try again later.",
           under_identity_verification: true,
         });
       } else if (user.is_identity_verified === "rejected") {
-        return res.status(403).json({
+        return res.status(STATUS_CODE.FORBIDDEN).json({
           message:
             "Your account has been rejected. Please contact the support team.",
           under_identity_verification: true,
@@ -511,7 +512,7 @@ const googleAuth = async (req, res) => {
         res
       );
 
-      return res.status(200).json({
+      return res.status(STATUS_CODE.OK).json({
         success: true,
         message: `${
           role.charAt(0).toUpperCase() + role.slice(1)
@@ -522,10 +523,10 @@ const googleAuth = async (req, res) => {
       });
     }
 
-    res.status(500).json({ message: "Failed to log in" });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Failed to log in" });
   } catch (error) {
     console.error("Google Auth Error: ", error.stack || error);
-    res.status(500).json({
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({
       message: "Internal server error. Please try again.",
     });
   }
@@ -541,20 +542,20 @@ const forgotPassword = async (req, res) => {
     if (role === "student") {
       user = await Student.findOne({ email });
       if (!user) {
-        return res.status(404).json({ message: "User not found." });
+        return res.status(STATUS_CODE.NOT_FOUND).json({ message: "User not found." });
       }
     } else if (role === "tutor") {
       user = await Tutor.findOne({ email });
       if (!user) {
-        return res.status(404).json({ message: "User not found." });
+        return res.status(STATUS_CODE.NOT_FOUND).json({ message: "User not found." });
       }
     } else if (role === "admin") {
       user = await Admin.findOne({ email });
       if (!user) {
-        return res.status(404).json({ message: "User not found." });
+        return res.status(STATUS_CODE.NOT_FOUND).json({ message: "User not found." });
       }
     } else {
-      return res.status(400).json({ error: "No roles Found." });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ error: "No roles Found." });
     }
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
@@ -571,10 +572,10 @@ const forgotPassword = async (req, res) => {
     )}&role=${role}`;
     await sendPasswordResetEmail(email, link);
 
-    return res.status(200).json({ message: "Email sent successfully." });
+    return res.status(STATUS_CODE.OK).json({ message: "Email sent successfully." });
   } catch (error) {
     console.error("Forgot Password Error: ", error);
-    return res.status(500).json({ message: "Something went wrong." });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Something went wrong." });
   }
 };
 
@@ -584,7 +585,7 @@ const resetPassword = async (req, res) => {
     const role = req.query.role;
     const { newPassword, confirmPassword } = req.body;
     if (newPassword !== confirmPassword) {
-      return res.status(400).json({ message: "Password does not match" });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Password does not match" });
     }
     let user;
 
@@ -605,7 +606,7 @@ const resetPassword = async (req, res) => {
       });
     }
     if (!user) {
-      return res.status(400).json({ message: "Invalid or expired token." });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Invalid or expired token." });
     }
     const oldPassword = await comparePassword(
       newPassword,
@@ -613,7 +614,7 @@ const resetPassword = async (req, res) => {
     );
     if (oldPassword) {
       return res
-        .status(400)
+        .status(STATUS_CODE.BAD_REQUEST)
         .json({ message: "Password cannot be same as old password" });
     }
 
@@ -623,9 +624,9 @@ const resetPassword = async (req, res) => {
     user.resetToken = undefined;
     user.resetTokenExpiry = undefined;
     await user.save();
-    return res.status(200).json({ message: "Password reset successfully." });
+    return res.status(STATUS_CODE.OK).json({ message: "Password reset successfully." });
   } catch (error) {
-    res.status(500).json({ message: error });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: error });
     console.log("Reset password Error: ", error);
   }
 };
@@ -652,7 +653,7 @@ const tutorSignUp = async (req, res) => {
     });
 
     if (isUserVerified || isStudentExists || isUserExists) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "User already exists" });
     }
 
     const hashedPassword = await hashPassword(password);
@@ -679,12 +680,12 @@ const tutorSignUp = async (req, res) => {
 
     await sendOTPEmail(email, otp);
 
-    return res.status(201).json({
+    return res.status(STATUS_CODE.CREATED).json({
       message: "OTP sent to your email.",
     });
   } catch (error) {
     console.log("Tutor SignUp Error: ", error);
-    res.status(500).json({ message: "Something went wrong" });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Something went wrong" });
   }
 };
 
@@ -701,7 +702,7 @@ const tutorSignIn = async (req, res) => {
 
     if (isStudentAccount) {
       return res
-        .status(400)
+        .status(STATUS_CODE.BAD_REQUEST)
         .json({ message: "This account is a student account" });
     }
 
@@ -711,31 +712,31 @@ const tutorSignIn = async (req, res) => {
 
     if (isUserUnverified && isUserUnverified.role !== "tutor") {
       return res
-        .status(400)
+        .status(STATUS_CODE.BAD_REQUEST)
         .json({ message: "This account is a student account" });
     }
 
     if (isUserUnverified) {
       return res
-        .status(403)
+        .status(STATUS_CODE.FORBIDDEN)
         .json({ not_verified: true, message: "Verify your email" });
     }
 
     if (!tutor && !isUserUnverified) {
-      return res.status(400).json({ message: "Account not found" });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Account not found" });
     }
 
     const isMatch = await comparePassword(password, tutor?.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "Incorrect Password" });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Incorrect Password" });
     }
     if (tutor.is_identity_verified === "pending") {
-      return res.status(403).json({
+      return res.status(STATUS_CODE.FORBIDDEN).json({
         message: "Account verification in progress. Please try again later.",
         under_identity_verification: true,
       });
     } else if (tutor.is_identity_verified === "rejected") {
-      return res.status(403).json({
+      return res.status(STATUS_CODE.FORBIDDEN).json({
         message:
           "Your account has been rejected. Please contact the support team.",
         under_identity_verification: true,
@@ -743,7 +744,7 @@ const tutorSignIn = async (req, res) => {
     }
 
     if (tutor.is_blocked) {
-      return res.status(401).json({
+      return res.status(STATUS_CODE.UNAUTHORIZED).json({
         message:
           "Your account has been blocked. Please contact the support team.",
       });
@@ -783,7 +784,7 @@ const tutorSignIn = async (req, res) => {
         res
       );
 
-      return res.status(200).json({
+      return res.status(STATUS_CODE.OK).json({
         success: true,
         message: "Tutor logged in successfully",
         tutorData: tutorDetails,
@@ -793,7 +794,7 @@ const tutorSignIn = async (req, res) => {
     }
   } catch (error) {
     console.log("SignIn Error: ", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -804,13 +805,13 @@ const adminSignIn = async (req, res) => {
       $or: [{ email }, { user_name: email }],
     });
     if (!admin) {
-      return res.status(400).json({ message: "Account not found" });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Account not found" });
     }
 
     const isMatch = await comparePassword(password, admin?.password);
 
     if (!isMatch) {
-      return res.status(400).json({ message: "Incorrect Password" });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Incorrect Password" });
     }
     const adminDataToGenerateToken = {
       _id: admin?._id,
@@ -843,7 +844,7 @@ const adminSignIn = async (req, res) => {
         res
       );
 
-      res.status(200).json({
+      res.status(STATUS_CODE.OK).json({
         message: "Admin logged in successfully",
         adminData: adminDetails,
         success: true,
@@ -853,7 +854,7 @@ const adminSignIn = async (req, res) => {
     }
   } catch (error) {
     console.log("Admin Sign In Error: ", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -868,7 +869,7 @@ const refreshAccessToken = async (req, res) => {
 
     if (!refreshToken) {
       console.log(chalk.redBright("~~~~~Refreshing Failed~~~~~"));
-      return res.status(403).json({
+      return res.status(STATUS_CODE.FORBIDDEN).json({
         message: "Refresh token expired. Login to your account",
         success: false,
       });
@@ -877,7 +878,7 @@ const refreshAccessToken = async (req, res) => {
     const tokenDoc = await RefreshToken.findOne({ token: refreshToken });
     if (!tokenDoc) {
       console.log(chalk.redBright("~~~~~Refreshing Failed~~~~~"));
-      return res.status(403).json({
+      return res.status(STATUS_CODE.FORBIDDEN).json({
         message: "Invalid refresh token",
         success: false,
       });
@@ -901,7 +902,7 @@ const refreshAccessToken = async (req, res) => {
     const { user: role, expiresAt } = tokenDoc;
 
     if (!roleSecrets[role]) {
-      return res.status(403).json({
+      return res.status(STATUS_CODE.FORBIDDEN).json({
         message: "Invalid role in refresh token",
         success: false,
         role,
@@ -919,7 +920,7 @@ const refreshAccessToken = async (req, res) => {
         sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
       });
 
-      return res.status(403).json({
+      return res.status(STATUS_CODE.FORBIDDEN).json({
         message: "Refresh token expired. Login to your account",
         success: false,
       });
@@ -947,7 +948,7 @@ const refreshAccessToken = async (req, res) => {
       );
       console.log(chalk.greenBright("~~~~~Refreshing Completed~~~~~"));
 
-      return res.status(200).json({
+      return res.status(STATUS_CODE.OK).json({
         message: "Access Token created successfully",
         success: true,
         access_token: newAccessToken,
@@ -955,14 +956,14 @@ const refreshAccessToken = async (req, res) => {
       });
     } catch (err) {
       console.error("Invalid Refresh Token:", err.message);
-      return res.status(403).json({
+      return res.status(STATUS_CODE.FORBIDDEN).json({
         message: "Invalid refresh token",
         success: false,
       });
     }
   } catch (error) {
     console.error("Error in Refresh Token:", error.message);
-    return res.status(500).json({
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({
       message: "Something went wrong",
       success: false,
       error: error.message,
@@ -975,7 +976,7 @@ const userLogout = async (req, res) => {
   console.log("role", role);
   const refreshToken = req.cookies[`${role}RefreshToken`];
   if (!refreshToken) {
-    return res.status(403).json({
+    return res.status(STATUS_CODE.FORBIDDEN).json({
       message: "Refresh token expired. Login to your account",
       success: false,
     });
@@ -989,7 +990,7 @@ const userLogout = async (req, res) => {
     sameSite: "strict",
   });
 
-  return res.status(200).json({ message: "Logged out successfully." });
+  return res.status(STATUS_CODE.OK).json({ message: "Logged out successfully." });
 };
 
 const sendOtpForProfileUpdate = async (req, res) => {
@@ -998,7 +999,7 @@ const sendOtpForProfileUpdate = async (req, res) => {
     console.log(role, email);
 
     if (!role || !email) {
-      return res.status(400).json({ error: "Role and email are required." });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ error: "Role and email are required." });
     }
 
     const optExists = await Otp.findOne({ contact: email, type: "email" });
@@ -1007,7 +1008,7 @@ const sendOtpForProfileUpdate = async (req, res) => {
         console.log("existS");
         console.log(chalk.green(`OTP:${chalk.yellow(optExists.otp)} `));
         await sendOTPEmailForUpdate(email, optExists.otp);
-        return res.status(200).json({ message: "OTP sent successfully." });
+        return res.status(STATUS_CODE.OK).json({ message: "OTP sent successfully." });
       } else if (optExists.expires_at <= new Date() || optExists.used) {
         console.log("OTP EXPIRED");
         await Otp.deleteOne({ contact: email, type: "email" });
@@ -1016,7 +1017,7 @@ const sendOtpForProfileUpdate = async (req, res) => {
 
     const validRoles = ["student", "tutor"];
     if (!validRoles.includes(role)) {
-      return res.status(400).json({ error: "Invalid role provided." });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ error: "Invalid role provided." });
     }
 
     const [student, tutor, unverifiedUser, admin] = await Promise.all([
@@ -1030,7 +1031,7 @@ const sendOtpForProfileUpdate = async (req, res) => {
 
     console.log(userExists);
     if (userExists) {
-      return res.status(404).json({
+      return res.status(STATUS_CODE.NOT_FOUND).json({
         message:
           "An account with this email already exists. Please use a different email.",
       });
@@ -1050,11 +1051,11 @@ const sendOtpForProfileUpdate = async (req, res) => {
 
     await sendOTPEmailForUpdate(email, otp);
 
-    return res.status(200).json({ message: "OTP sent to your email." });
+    return res.status(STATUS_CODE.OK).json({ message: "OTP sent to your email." });
   } catch (error) {
     console.error("Error in sendOtpForProfileUpdate: ", error);
     return res
-      .status(500)
+      .status(STATUS_CODE.INTERNAL_SERVER_ERROR)
       .json({ error: "Failed to send OTP. Please try again." });
   }
 };
@@ -1064,7 +1065,7 @@ const verifyOtpProfileUpdate = async (req, res) => {
     const { email, otp, role, user_id } = req.body;
     console.log(req.body);
     if (!email || !otp || !role || !user_id) {
-      return res.status(400).json({ error: "All fields are required" });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ error: "All fields are required" });
     }
 
     const otpEntry = await Otp.findOne({
@@ -1075,15 +1076,15 @@ const verifyOtpProfileUpdate = async (req, res) => {
     });
 
     if (!otpEntry) {
-      return res.status(400).json({ message: "Invalid or expired OTP." });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Invalid or expired OTP." });
     }
 
     if (otpEntry.expires_at < new Date()) {
-      return res.status(400).json({ message: "OTP has expired." });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "OTP has expired." });
     }
 
     if (otpEntry.used) {
-      return res.status(400).json({ error: "OTP has already been used." });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ error: "OTP has already been used." });
     }
 
     await Otp.deleteOne({ _id: otpEntry._id });
@@ -1101,12 +1102,12 @@ const verifyOtpProfileUpdate = async (req, res) => {
     // }
 
     return res
-      .status(200)
+      .status(STATUS_CODE.OK)
       .json({ message: "Email verified. Click on Save Changes to update." });
   } catch (err) {
     console.error("Error in verifyOtpProfileUpdate: ", err);
     return res
-      .status(500)
+      .status(STATUS_CODE.INTERNAL_SERVER_ERROR)
       .json({ error: "Failed to verify OTP. Please try again." });
   }
 };

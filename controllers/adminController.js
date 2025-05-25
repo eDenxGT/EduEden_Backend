@@ -9,6 +9,7 @@ const {
   sendTutorRejectionEmail,
 } = require("../utils/emailUtils");
 const FRONTEND_URL = process.env.CLIENT_URL;
+const STATUS_CODE  = require("../constants/statusCode");
 
 const getTutors = async (req, res) => {
   try {
@@ -19,12 +20,12 @@ const getTutors = async (req, res) => {
         user_id: tutor.user_id,
         full_name: tutor.full_name,
       }));
-      return res.status(200).json({ tutors: tutorsDataToSend });
+      return res.status(STATUS_CODE.OK).json({ tutors: tutorsDataToSend });
     }
-    return res.status(200).json({ tutors });
+    return res.status(STATUS_CODE.OK).json({ tutors });
   } catch (error) {
     console.error("Error fetching tutors:", error);
-    res.status(500).json({ message: "Error fetching tutors" });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Error fetching tutors" });
   }
 };
 
@@ -35,30 +36,30 @@ const toggleTutorStatus = async (req, res) => {
     const tutor = await Tutor.findOne({ user_id: tutorId });
 
     if (!tutor) {
-      return res.status(404).json({ message: "Tutor not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Tutor not found" });
     }
 
     tutor.is_blocked = !tutor.is_blocked;
 
     await tutor.save();
-    return res.status(200).json({
+    return res.status(STATUS_CODE.OK).json({
       message: `${tutor.full_name} has been successfully ${
         tutor.is_blocked ? "blocked" : "unblocked"
       }.`,
     });
   } catch (error) {
     console.log("Toggle Tutor Status Error: ", error);
-    res.status(500).json({ message: "Error toggling tutor status" });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Error toggling tutor status" });
   }
 };
 
 const getStudents = async (req, res) => {
   try {
     const students = await Student.find();
-    return res.status(200).json({ students });
+    return res.status(STATUS_CODE.OK).json({ students });
   } catch (error) {
     console.log("Students fetching error Admin side:", error);
-    res.status(500).json({ message: "Error fetching students" });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Error fetching students" });
   }
 };
 
@@ -69,21 +70,21 @@ const toggleStudentStatus = async (req, res) => {
     const student = await Student.findOne({ user_id: studentId });
 
     if (!student) {
-      return res.status(404).json({ message: "Student not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Student not found" });
     }
 
     student.is_blocked = !student.is_blocked;
 
     await student.save();
 
-    return res.status(200).json({
+    return res.status(STATUS_CODE.OK).json({
       message: `${student.full_name} has been successfully ${
         student.is_blocked ? "blocked" : "unblocked"
       }.`,
     });
   } catch (error) {
     console.log("Toggle Student Status Error: ", error);
-    return res.status(500).json({ message: "Error toggling student status" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Error toggling student status" });
   }
 };
 
@@ -96,10 +97,10 @@ const searchStudents = async (req, res) => {
         { email: { $regex: query, $options: "i" } },
       ],
     });
-    return res.status(200).json({ students });
+    return res.status(STATUS_CODE.OK).json({ students });
   } catch (error) {
     console.log("Search Students Error: ", error);
-    return res.status(500).json({ message: "Error searching students" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Error searching students" });
   }
 };
 
@@ -112,10 +113,10 @@ const searchTutors = async (req, res) => {
         { email: { $regex: query, $options: "i" } },
       ],
     });
-    return res.status(200).json({ tutors });
+    return res.status(STATUS_CODE.OK).json({ tutors });
   } catch (error) {
     console.log("Search Tutors Error: ", error);
-    return res.status(500).json({ message: "Error searching tutors" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Error searching tutors" });
   }
 };
 
@@ -127,11 +128,11 @@ const getTutorApplications = async (req, res) => {
         { is_identity_verified: "rejected" },
       ],
     });
-    return res.status(200).json({ applications });
+    return res.status(STATUS_CODE.OK).json({ applications });
   } catch (error) {
     console.log("Get Tutor Applications Error: ", error);
     return res
-      .status(500)
+      .status(STATUS_CODE.INTERNAL_SERVER_ERROR)
       .json({ message: "Error getting tutor applications" });
   }
 };
@@ -141,7 +142,7 @@ const updateTutorApplicationStatus = async (req, res) => {
     const { tutor_id, status } = req.body;
     const tutor = await Tutor.findOne({ user_id: tutor_id });
     if (!tutor) {
-      return res.status(404).json({ message: "Tutor not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Tutor not found" });
     }
     tutor.is_identity_verified = status;
     await tutor.save();
@@ -161,12 +162,12 @@ const updateTutorApplicationStatus = async (req, res) => {
     }
 
     return res
-      .status(200)
+      .status(STATUS_CODE.OK)
       .json({ message: "Tutor application status updated successfully" });
   } catch (error) {
     console.log("Update Tutor Application Status Error: ", error);
     return res
-      .status(500)
+      .status(STATUS_CODE.INTERNAL_SERVER_ERROR)
       .json({ message: "Error updating tutor application status" });
   }
 };
@@ -308,7 +309,7 @@ const getAllOrders = async (req, res) => {
 
     const total = totalOrders[0]?.total || 0;
 
-    return res.status(200).json({
+    return res.status(STATUS_CODE.OK).json({
       orders,
       total,
       totalPages: Math.ceil(total / limit),
@@ -316,7 +317,7 @@ const getAllOrders = async (req, res) => {
     });
   } catch (error) {
     console.log("Get All Orders Error: ", error);
-    return res.status(500).json({ message: "Error getting all orders" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Error getting all orders" });
   }
 };
 
@@ -387,7 +388,7 @@ const getTutorWithdrawals = async (req, res) => {
     const withdrawals = results[0]?.data || [];
     const total = results[0]?.totalCount[0]?.total || 0;
 
-    return res.status(200).json({
+    return res.status(STATUS_CODE.OK).json({
       withdrawals: withdrawals.map((withdrawal) => ({
         ...withdrawal,
         tutor_name: withdrawal.tutorDetails?.full_name || "Unknown",
@@ -396,7 +397,7 @@ const getTutorWithdrawals = async (req, res) => {
     });
   } catch (error) {
     console.error("Get Tutor Withdrawals Error: ", error);
-    return res.status(500).json({ message: "Error getting tutor withdrawals" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Error getting tutor withdrawals" });
   }
 };
 
@@ -405,7 +406,7 @@ const updateWithdrawalStatus = async (req, res) => {
     const { request_id, newStatus } = req.body;
     const withdrawal = await Withdrawal.findOne({ _id: request_id });
     if (!withdrawal) {
-      return res.status(404).json({ message: "Withdrawal not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Withdrawal not found" });
     }
     let tutor = null;
     withdrawal.status = newStatus;
@@ -414,7 +415,7 @@ const updateWithdrawalStatus = async (req, res) => {
     if (newStatus === "rejected") {
       tutor = await Tutor.findOne({ user_id: withdrawal?.tutor_id });
       if (!tutor) {
-        return res.status(404).json({ message: "Tutor not found" });
+        return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Tutor not found" });
       }
       console.log(tutor);
       tutor.withdrawn_amount -= Number(withdrawal?.amount);
@@ -424,12 +425,12 @@ const updateWithdrawalStatus = async (req, res) => {
     }
     withdrawal.save();
     return res
-      .status(200)
+      .status(STATUS_CODE.OK)
       .json({ message: "Withdrawal status updated successfully" });
   } catch (error) {
     console.error("Update Withdrawal Status Error: ", error);
     return res
-      .status(500)
+      .status(STATUS_CODE.INTERNAL_SERVER_ERROR)
       .json({ message: "Error updating withdrawal status" });
   }
 };
@@ -487,7 +488,7 @@ const getAdminDashboardData = async (req, res) => {
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
 
-    return res.status(200).json({
+    return res.status(STATUS_CODE.OK).json({
       success: true,
       data: {
         recentActivities: {
@@ -506,7 +507,7 @@ const getAdminDashboardData = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching admin dashboard data:", error);
-    return res.status(500).json({ success: false, message: "Server error" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ success: false, message: "Server error" });
   }
 };
 

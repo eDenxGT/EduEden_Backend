@@ -2,6 +2,7 @@ const Lecture = require("../models/lectureModel");
 const Course = require("../models/courseModel");
 const Student = require("../models/studentModel");
 const Tutor = require("../models/tutorModel");
+const STATUS_CODE  = require("../constants/statusCode");
 
 const addLecture = async (req, res) => {
   const {
@@ -28,7 +29,7 @@ const addLecture = async (req, res) => {
     });
 
     await lecture.save();
-    return res.status(200).json({ message: "Lecture added successfully!" });
+    return res.status(STATUS_CODE.CREATED).json({ message: "Lecture added successfully!" });
   } catch (error) {
     console.log("Lecture Adding Error: ", error);
   }
@@ -50,7 +51,7 @@ const updateLecture = async (req, res) => {
     );
     if (lecture) {
       return res
-        .status(200)
+        .status(STATUS_CODE.OK)
         .json({ message: "Lecture updated successfully!", lecture });
     }
   } catch (error) {
@@ -63,9 +64,9 @@ const getLecturesByCourseIdForStudent = async (req, res) => {
   const { user_id } = req.user;
 
   if (!user_id)
-    return res.status(400).json({ message: "Student ID is required." });
+    return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Student ID is required." });
   if (!course_id)
-    return res.status(400).json({ message: "Course ID is required." });
+    return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Course ID is required." });
 
   try {
     const studentEnrolledThisCourse = await Student.findOne({
@@ -74,16 +75,16 @@ const getLecturesByCourseIdForStudent = async (req, res) => {
     });
     if (!studentEnrolledThisCourse)
       return res
-        .status(404)
+        .status(STATUS_CODE.NOT_FOUND)
         .json({ message: "You are not enrolled in this course!" });
 
     const course = await Course.findOne({ course_id });
-    if (!course) return res.status(404).json({ message: "Course not found!" });
+    if (!course) return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Course not found!" });
 
     const tutor_id = course.tutor_id;
     const tutorDataToSend = await Tutor.findOne({ user_id: tutor_id });
     if (!tutorDataToSend)
-      return res.status(404).json({ message: "Tutor not found!" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Tutor not found!" });
 
     const lectures = await Lecture.find({ course_id });
     lectures.push({ tutor_name: tutorDataToSend?.full_name });
@@ -91,7 +92,7 @@ const getLecturesByCourseIdForStudent = async (req, res) => {
 
     if (lectures) {
       return res
-        .status(200)
+        .status(STATUS_CODE.OK)
         .json({ message: "Lectures fetched successfully!", lectures });
     }
   } catch (error) {
@@ -104,17 +105,17 @@ const getLecturesByCourseIdForTutor = async (req, res) => {
   const { user_id } = req.user;
   try {
     if (!user_id)
-      return res.status(400).json({ message: "Tutor ID is required." });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Tutor ID is required." });
     if (!course_id)
-      return res.status(400).json({ message: "Course ID is required." });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Course ID is required." });
     const course = await Course.findOne({
       $and: [{ course_id }, { tutor_id: user_id }],
     });
-    if (!course) return res.status(404).json({ message: "Course not found!" });
+    if (!course) return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Course not found!" });
     const lectures = await Lecture.find({ course_id });
     if (lectures) {
       return res
-        .status(200)
+        .status(STATUS_CODE.OK)
         .json({ message: "Lectures fetched successfully!", lectures });
     }
   } catch (error) {

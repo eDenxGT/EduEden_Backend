@@ -1,4 +1,5 @@
 const cloudinary = require("../config/cloudinary");
+const STATUS_CODE = require("../constants/statusCode");
 
 exports.generateSignature = (req, res) => {
 	const { folder, public_id, timestamp, transformation } = req.body;
@@ -16,13 +17,13 @@ exports.generateSignature = (req, res) => {
 			process.env.CLOUDINARY_API_SECRET
 		);
 
-		res.status(200).json({
+		res.status(STATUS_CODE.OK).json({
 			signature,
 			apiKey: process.env.CLOUDINARY_API_KEY,
 			cloudName: process.env.CLOUDINARY_CLOUD_NAME,
 		});
 	} catch (error) {
 		console.error("Signature Generation Error: ", error);
-		res.status(500).json({ error: "Failed to generate signature" });
+		res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ error: "Failed to generate signature" });
 	}
 };

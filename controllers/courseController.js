@@ -6,6 +6,7 @@ const CourseProgress = require("../models/courseProgressModel");
 
 const { setupQuiz } = require("../controllers/quizController");
 const { default: mongoose } = require("mongoose");
+const STATUS_CODE  = require("../constants/statusCode");
 
 const createCourse = async (req, res) => {
   const {
@@ -37,11 +38,11 @@ const createCourse = async (req, res) => {
     });
     await course.save();
     return res
-      .status(201)
+      .status(STATUS_CODE.CREATED)
       .json({ message: "Course created successfully", course });
   } catch (error) {
     console.log("Create Course error : ", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -64,7 +65,7 @@ const updateCourse = async (req, res) => {
 
     const course = await Course.findOne({ course_id });
     if (!course) {
-      return res.status(404).json({ message: "Course not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Course not found" });
     }
 
     if (course.title !== title) {
@@ -111,11 +112,11 @@ const updateCourse = async (req, res) => {
     await course.save();
 
     return res
-      .status(200)
+      .status(STATUS_CODE.OK)
       .json({ message: "Course updated successfully", course });
   } catch (error) {
     console.log("Update Course error : ", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -193,10 +194,10 @@ const getCoursesByTutorId = async (req, res) => {
 
     console.log(courses, total);
 
-    return res.status(200).json({ courses, total });
+    return res.status(STATUS_CODE.OK).json({ courses, total });
   } catch (error) {
     console.error("Error fetching tutor courses:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -207,10 +208,10 @@ const getCoursesByStudentId = async (req, res) => {
       user_id: student_id,
     });
     if (!student) {
-      return res.status(404).json({ message: "Student not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Student not found" });
     }
     if (student.active_courses.length === 0) {
-      return res.status(200).json({ courses: [] });
+      return res.status(STATUS_CODE.OK).json({ courses: [] });
     }
     const coursesEnrolledByStudent = await Course.find({
       course_id: { $in: student.active_courses },
@@ -218,10 +219,10 @@ const getCoursesByStudentId = async (req, res) => {
     });
 
     // console.log(coursesEnrolledByStudent);
-    return res.status(200).json({ courses: coursesEnrolledByStudent });
+    return res.status(STATUS_CODE.OK).json({ courses: coursesEnrolledByStudent });
   } catch (error) {
     console.log("Get Courses By Student Id error : ", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -235,7 +236,7 @@ const getAllCourses = async (req, res) => {
         course_id: course.course_id,
         title: course.title,
       }));
-      return res.status(200).json({ courses: coursesDataToSend });
+      return res.status(STATUS_CODE.OK).json({ courses: coursesDataToSend });
     }
     if (apiFor === "forPurchaseHistory") {
       availableCourses = courses.filter((course) => course.is_listed === true);
@@ -243,12 +244,12 @@ const getAllCourses = async (req, res) => {
         course_id: course.course_id,
         title: course.title,
       }));
-      return res.status(200).json({ courses: coursesDataToSend });
+      return res.status(STATUS_CODE.OK).json({ courses: coursesDataToSend });
     }
-    return res.status(200).json({ courses });
+    return res.status(STATUS_CODE.OK).json({ courses });
   } catch (error) {
     console.log("Get All Courses error : ", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -282,10 +283,10 @@ const getAllListedCourses = async (req, res) => {
       Course.countDocuments(filters),
     ]);
 
-    res.status(200).json({ courses, total });
+    res.status(STATUS_CODE.OK).json({ courses, total });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Failed to fetch courses" });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Failed to fetch courses" });
   }
 };
 
@@ -300,10 +301,10 @@ const getCourseByCourseId = async (req, res) => {
       const student = await Student.findOne({ user_id });
       console.log(student);
       if (!student) {
-        return res.status(404).json({ message: "Student not found" });
+        return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Student not found" });
       }
       if (!student.active_courses.includes(course_id)) {
-        return res.status(404).json({ message: "Course not found" });
+        return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Course not found" });
       }
     }
 
@@ -364,21 +365,21 @@ const getCourseByCourseId = async (req, res) => {
     ]);
 
     if (course.length === 0) {
-      return res.status(404).json({ message: "Course not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Course not found" });
     }
 
     if (apiFor === "studentSingleCourse") {
       if (course[0].is_listed === false) {
-        return res.status(404).json({ message: "Course not found" });
+        return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Course not found" });
       }
-      return res.status(200).json({ course: course[0] });
+      return res.status(STATUS_CODE.OK).json({ course: course[0] });
     }
 
-    return res.status(200).json({ course: course[0] });
+    return res.status(STATUS_CODE.OK).json({ course: course[0] });
   } catch (error) {
     console.log(req.user);
     console.log("Get Course By Course Id error:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -388,14 +389,14 @@ const deleteCourseById = async (req, res) => {
 
     const deletedCourse = await Course.deleteOne({ course_id });
     if (!deletedCourse) {
-      return res.status(404).json({ message: "Course not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Course not found" });
     }
     return res
-      .status(200)
+      .status(STATUS_CODE.OK)
       .json({ message: "Course deleted successfully", course_id });
   } catch (error) {
     console.log("Delete Course By Id error : ", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -408,14 +409,14 @@ const handleCourseStatus = async (req, res) => {
     );
 
     if (!course) {
-      return res.status(404).json({ message: "Course not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Course not found" });
     }
 
     course.is_listed = !course.is_listed;
 
     await course.save();
     return res
-      .status(200)
+      .status(STATUS_CODE.OK)
       .json({ message: "Course status updated successfully", course });
   } catch (err) {
     console.log("Course Status toggling error", err);
@@ -432,13 +433,13 @@ const getCourseProgressByStudentId = async (req, res) => {
     });
 
     if (!courseProgress) {
-      return res.status(404).json({ message: "Course progress not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Course progress not found" });
     }
 
-    return res.status(200).json({ courseProgress });
+    return res.status(STATUS_CODE.OK).json({ courseProgress });
   } catch (error) {
     console.log("Get Course Progress By Student Id error : ", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -462,7 +463,7 @@ const updateCourseProgressByStudentId = async (req, res) => {
     );
     // console.log(result);
     if (!result) {
-      return res.status(404).json({ message: "Course progress not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Course progress not found" });
     }
 
     const allCompleted = result?.progress?.every(
@@ -471,18 +472,18 @@ const updateCourseProgressByStudentId = async (req, res) => {
 
     if (allCompleted && result?.quiz_marks < 7) {
       const quiz = await setupQuiz(course_id, student_id, (numQuestions = 10));
-      return res.status(200).json({ message: "Course completed", quiz });
+      return res.status(STATUS_CODE.OK).json({ message: "Course completed", quiz });
     }
 
     // console.log(allCompleted)
 
-    return res.status(200).json({
+    return res.status(STATUS_CODE.OK).json({
       message: "Course progress updated successfully",
       progress: result.progress,
     });
   } catch (error) {
     console.error("Update Course Progress error:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -494,7 +495,7 @@ const updateCourseReviews = async (req, res) => {
       student_id,
     });
     if (courseProgressOfStudent?.is_review_rated === true) {
-      return res.status(400).json({ message: "You already rated this course" });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "You already rated this course" });
     }
     courseProgressOfStudent.is_review_rated = true;
     const courseUpdated = await Course.updateOne({ course_id }, [
@@ -514,12 +515,12 @@ const updateCourseReviews = async (req, res) => {
 
     const submitted = await courseProgressOfStudent.save();
     if (!submitted || !courseUpdated) {
-      return res.status(400).json({
+      return res.status(STATUS_CODE.BAD_REQUEST).json({
         message:
           "Something went wrong while review submitting... Please try again.",
       });
     }
-    return res.status(200).json({ message: "Thanks for your feedback." });
+    return res.status(STATUS_CODE.OK).json({ message: "Thanks for your feedback." });
   } catch (error) {
     console.log("Course Review Updating Error: ", error);
     return res.json({ message: "Internal Server Error" });
@@ -556,10 +557,10 @@ const getAllCoursesForAdminSide = async (req, res) => {
       Course.countDocuments(filters),
     ]);
 
-    return res.status(200).json({ message: "All courses fetched successfully", courses, total });
+    return res.status(STATUS_CODE.OK).json({ message: "All courses fetched successfully", courses, total });
   } catch (error) {
     console.error("Error fetching courses for admin:", error);
-    return res.status(500).json({ message: "Internal Server Error" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal Server Error" });
   }
 };
 

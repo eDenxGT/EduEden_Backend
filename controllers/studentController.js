@@ -5,6 +5,7 @@ const Course = require("../models/courseModel");
 const CourseProgress = require("../models/courseProgressModel");
 
 const { comparePassword, hashPassword } = require("../utils/passwordUtils");
+const STATUS_CODE  = require("../constants/statusCode");
 
 const updateStudent = async (req, res) => {
   try {
@@ -13,7 +14,7 @@ const updateStudent = async (req, res) => {
 
     const student = await Student.findById(studentId);
     if (!student) {
-      return res.status(404).json({ message: "Student not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Student not found" });
     }
 
     if (
@@ -29,7 +30,7 @@ const updateStudent = async (req, res) => {
       });
 
       if (existingStudent || existingTutor) {
-        return res.status(400).json({ message: "Username already exists" });
+        return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Username already exists" });
       }
     }
 
@@ -43,7 +44,7 @@ const updateStudent = async (req, res) => {
       });
 
       if (existingStudent || existingTutor) {
-        return res.status(400).json({ message: "Email already exists" });
+        return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Email already exists" });
       }
     }
 
@@ -57,7 +58,7 @@ const updateStudent = async (req, res) => {
       });
 
       if (existingStudent || existingTutor) {
-        return res.status(400).json({ message: "Phone number already exists" });
+        return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Phone number already exists" });
       }
     }
 
@@ -67,9 +68,9 @@ const updateStudent = async (req, res) => {
         student.password
       );
       if (!isPasswordValid) {
-        return res.status(401).json({ message: "Invalid current password" });
+        return res.status(STATUS_CODE.UNAUTHORIZED).json({ message: "Invalid current password" });
       } else if (currentPassword === newPassword) {
-        return res.status(400).json({
+        return res.status(STATUS_CODE.BAD_REQUEST).json({
           message: "New password cannot be the same as the current password",
         });
       }
@@ -90,13 +91,13 @@ const updateStudent = async (req, res) => {
 
     const { password: _, ...studentWithoutPassword } = student.toObject();
 
-    res.status(200).json({
+    res.status(STATUS_CODE.OK).json({
       message: "Profile updated successfully",
       studentData: studentWithoutPassword,
     });
   } catch (error) {
     console.error("Error updating student:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -106,12 +107,12 @@ const getStudentDetails = async (req, res) => {
     const student = await Student.findOne({ user_id: student_id });
 
     if (!student) {
-      return res.status(404).json({ message: "Student not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Student not found" });
     }
-    res.status(200).json({ student });
+    res.status(STATUS_CODE.OK).json({ student });
   } catch (error) {
     console.error("Error retrieving student:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -127,12 +128,12 @@ const getAllTutorsForStudents = async (req, res) => {
         user_id: tutor.user_id,
         full_name: tutor.full_name,
       }));
-      return res.status(200).json({ tutors: tutorsDataToSend });
+      return res.status(STATUS_CODE.OK).json({ tutors: tutorsDataToSend });
     }
-    res.status(200).json({ tutors });
+    res.status(STATUS_CODE.OK).json({ tutors });
   } catch (error) {
     console.error("Error retrieving tutors:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -153,7 +154,7 @@ const getStudentPurchases = async (req, res) => {
     const student_id = req.user.user_id;
 
     if (!student_id) {
-      return res.status(400).json({ message: "Student ID is required" });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Student ID is required" });
     }
 
     const filters = { student_id };
@@ -223,6 +224,7 @@ const getStudentPurchases = async (req, res) => {
           student_name: "$student_details.full_name",
           amount: 1,
           status: 1,
+          payment_id: 1,
           created_at: 1,
           course_details: {
             $map: {
@@ -287,7 +289,7 @@ const getStudentPurchases = async (req, res) => {
 
     const total = totalPurchases[0]?.total || 0;
 
-    return res.status(200).json({
+    return res.status(STATUS_CODE.OK).json({
       purchases,
       total,
       totalPages: Math.ceil(total / limit),
@@ -295,7 +297,7 @@ const getStudentPurchases = async (req, res) => {
     });
   } catch (error) {
     console.log("Get Student Purchases Error: ", error);
-    return res.status(500).json({ message: "Error fetching purchases" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Error fetching purchases" });
   }
 };
 
@@ -305,11 +307,11 @@ const getEnrolledCourses = async (req, res) => {
     const { search, sort, category, tutor, page = 1, limit = 12 } = req.query;
     const student = await Student.findOne({ user_id });
     if (!student) {
-      return res.status(404).json({ message: "Student not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Student not found" });
     }
 
     if (!student.active_courses || student.active_courses.length === 0) {
-      return res.status(200).json({ courses: [] });
+      return res.status(STATUS_CODE.OK).json({ courses: [] });
     }
 
     const query = {
@@ -356,13 +358,13 @@ const getEnrolledCourses = async (req, res) => {
       .skip(skip)
       .limit(Number(limit));
 
-    return res.status(200).json({
+    return res.status(STATUS_CODE.OK).json({
       courses: coursesEnrolledByStudent,
       total_enrolled_courses: student.active_courses.length,
     });
   } catch (error) {
     console.error("Getting enrolled courses error:", error);
-    return res.status(500).json({ message: "Error fetching enrolled courses" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Error fetching enrolled courses" });
   }
 };
 
@@ -372,7 +374,7 @@ const getItemsForStudentHome = async (req, res) => {
     const { user_id } = req.user;
     const studentData = await Student.findOne({ user_id });
     if (!studentData) {
-      return res.status(404).json({ message: "Student not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Student not found" });
     }
     const courseProgressions = await CourseProgress.find({
       student_id: user_id,
@@ -404,7 +406,7 @@ const getItemsForStudentHome = async (req, res) => {
       .sort({ enrolled_count: -1, average_rating: -1 })
       .limit(3)
       .populate("category_id", "title");
-    res.status(200).json({
+    res.status(STATUS_CODE.OK).json({
       topRatedCourses,
       completedQuizzes,
       coursesInProgress,
@@ -413,7 +415,7 @@ const getItemsForStudentHome = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching items for student home:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -488,7 +490,7 @@ const getLandingPageData = async (req, res) => {
   } catch (error) {
     console.error("Error fetching landing page data:", error);
     return res
-      .status(500)
+      .status(STATUS_CODE.INTERNAL_SERVER_ERROR)
       .json({ success: false, message: "Server error. Please try again later." });
   }
 };

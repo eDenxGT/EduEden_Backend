@@ -6,6 +6,7 @@ const CourseProgress = require("../models/courseProgressModel");
 const axios = require("axios");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { options } = require("../routes/courseRoute");
+const STATUS_CODE = require("../constants/statusCode");
 const generateQuizUsingGemini = async (
   courseTitle,
   difficulty,
@@ -167,12 +168,12 @@ const getQuizByQuizId = async (req, res) => {
     const { quiz_id } = req.params;
     const quiz = await Quiz.findOne({ _id: quiz_id });
     if (!quiz) {
-      return res.status(404).json({ error: "Quiz not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ error: "Quiz not found" });
     }
     //* console.log(quiz)
-    return res.status(200).json(quiz);
+    return res.status(STATUS_CODE.OK).json(quiz);
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ error: error.message });
   }
 };
 
@@ -182,7 +183,7 @@ const submitQuiz = async (req, res) => {
     const { answers } = req.body;
     const quiz = await Quiz.findOne({ _id: quiz_id });
     if (!quiz) {
-      return res.status(404).json({ error: "Quiz not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ error: "Quiz not found" });
     }
     const quizAndAnswers = setupQuestionAndAnswersToEvaluate(
       quiz?.questions,
@@ -193,7 +194,7 @@ const submitQuiz = async (req, res) => {
       { $addToSet: { active_quizzes: quiz_id } }
     );
     if (!updateStudent) {
-      return res.status(500).json({ error: "Failed to update student" });
+      return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ error: "Failed to update student" });
     }
     const score = await calculateQuizScore(quizAndAnswers);
     await CourseProgress.updateOne(
@@ -201,9 +202,9 @@ const submitQuiz = async (req, res) => {
       { $set: { quiz_marks: score } }
     );
     console.log("SCORE:", score);
-    return res.status(200).json({ message: "Quiz Submitted." });
+    return res.status(STATUS_CODE.OK).json({ message: "Quiz Submitted." });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ error: error.message });
   }
 };
 
@@ -287,11 +288,11 @@ const getResultOfQuiz = async (req, res) => {
     const { quiz_id } = req.params;
     const quiz = await Quiz.findOne({ _id: quiz_id });
     if (!quiz) {
-      return res.status(404).json({ error: "Quiz not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ error: "Quiz not found" });
     }
     const course = await Course.findOne({ course_id: quiz.course_id });
     if (!course) {
-      return res.status(404).json({ error: "Course not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ error: "Course not found" });
     }
     const courseProgressData = await CourseProgress.findOne({
       course_id: quiz.course_id,
@@ -299,10 +300,10 @@ const getResultOfQuiz = async (req, res) => {
     });
 
     return res
-      .status(200)
+      .status(STATUS_CODE.OK)
       .json({ quiz, courseProgressData, courseName: course.title });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ error: error.message });
   }
 };
 

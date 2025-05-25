@@ -1,3 +1,4 @@
+const STATUS_CODE  = require("../constants/statusCode");
 const Category = require("../models/categoryModel");
 
 const createCategory = async (req, res) => {
@@ -8,19 +9,19 @@ const createCategory = async (req, res) => {
     });
 
     if (existingCategory) {
-      return res.status(400).json({ message: "Category already exists" });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Category already exists" });
     }
     const addNewCategory = new Category({
       title,
       description,
     });
     await addNewCategory.save();
-    return res.status(201).json({
+    return res.status(STATUS_CODE.CREATED).json({
       message: "Category created successfully",
       category: addNewCategory,
     });
   } catch (error) {
-    res.status(500).json({
+    res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({
       message: "Internal server error",
     });
     console.log("Create Category error : ", error);
@@ -38,18 +39,18 @@ const getAllCategories = async (req, res) => {
         title: category.title,
       }));
       return res
-        .status(200)
+        .status(STATUS_CODE.OK)
         .json({
           message: "Category Fetching Completed",
           categories: categoriesDataToSent,
         });
     }
     return res
-      .status(200)
+      .status(STATUS_CODE.OK)
       .json({ message: "Category Fetching Completed", categories });
   } catch (error) {
     console.log("Get All Categories error : ", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -58,15 +59,15 @@ const deleteCategory = async (req, res) => {
     const { id } = req.params;
     const deletedCategory = await Category.findByIdAndDelete(id);
     if (!deletedCategory) {
-      return res.status(404).json({ message: "Category not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Category not found" });
     }
     const deletedCoursesOfDeletedCategory = await Course.deleteMany({category_id: id})
     return res
-      .status(200)
+      .status(STATUS_CODE.OK)
       .json({ message: "Category deleted successfully", categoryId: id });
   } catch (error) {
     console.log("Delete Category error : ", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -80,15 +81,15 @@ const searchCategory = async (req, res) => {
     });
     if (!categories.length) {
       return res
-        .status(200)
+        .status(STATUS_CODE.OK)
         .json({ message: "No categories found", categories: [] });
     }
     console.log(categories);
 
-    return res.status(200).json({ message: "Category found", categories });
+    return res.status(STATUS_CODE.OK).json({ message: "Category found", categories });
   } catch (error) {
     console.log("Search Category error : ", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
@@ -100,7 +101,7 @@ const updateCategory = async (req, res) => {
       title: { $regex: title, $options: "i" },
     });
     if (isCategoryNameExists) {
-      return res.status(400).json({ message: "Category already exists" });
+      return res.status(STATUS_CODE.BAD_REQUEST).json({ message: "Category already exists" });
     }
     const updatedCategory = await Category.findByIdAndUpdate(
       id,
@@ -108,15 +109,15 @@ const updateCategory = async (req, res) => {
       { new: true }
     );
     if (!updatedCategory) {
-      return res.status(404).json({ message: "Category not found" });
+      return res.status(STATUS_CODE.NOT_FOUND).json({ message: "Category not found" });
     }
-    return res.status(200).json({
+    return res.status(STATUS_CODE.OK).json({
       message: "Category updated successfully",
       category: updatedCategory,
     });
   } catch (error) {
     console.log("Update Category error : ", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(STATUS_CODE.INTERNAL_SERVER_ERROR).json({ message: "Internal server error" });
   }
 };
 
